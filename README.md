@@ -12,7 +12,7 @@ This guide describes how to deploy the ER_Linux application (React frontend, Nod
 
 ## Prerequisites
 
-- Ubuntu 22.04.5 server with a static internal IP (e.g., `10.91.41.16`)
+- Ubuntu 22.04.5 server with a static internal IP (`10.91.41.16`)
 - Wildcard SSL certificate (`*.religare.in`) from your CA
 - DNS record for your subdomain (e.g., `erapp.religare.in`) pointing to your server
 - Git access to your project repository
