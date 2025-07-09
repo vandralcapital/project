@@ -5,7 +5,7 @@
 
 ## Overview
 
-This guide describes how to deploy the ER_Linux application (React frontend, Node/Express backend, MongoDB) on Ubuntu 22.04.5 with a wildcard SSL certificate (`*.yourdomain.com`).  
+This guide describes how to deploy the ER_Linux application (React frontend, Node/Express backend, MongoDB) on Ubuntu 22.04.5 with a wildcard SSL certificate (`*.religare.in`).  
 **All traffic is secured via HTTPS (port 443). No HTTP or remote MongoDB access is allowed.**
 
 ---
