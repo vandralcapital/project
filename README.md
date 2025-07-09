@@ -1,11 +1,26 @@
 
 ---
 
-# **Full Secure Deployment Guide (HTTPS Only, Ubuntu 22.04.5)**
+# Deployment Guide: Secure HTTPS-Only Full Stack App on Ubuntu 22.04.5
+
+## Overview
+
+This guide describes how to deploy the ER_Linux application (React frontend, Node/Express backend, MongoDB) on Ubuntu 22.04.5 with a wildcard SSL certificate (`*.yourdomain.com`).  
+**All traffic is secured via HTTPS (port 443). No HTTP or remote MongoDB access is allowed.**
 
 ---
 
-## **1. Prepare Your Server**
+## Prerequisites
+
+- Ubuntu 22.04.5 server with a static internal IP (e.g., `10.91.41.16`)
+- Wildcard SSL certificate (`*.yourdomain.com`) from your CA
+- DNS record for your subdomain (e.g., `erapp.yourdomain.com`) pointing to your server
+- Git access to your project repository
+- `.env` files for backend and frontend, properly configured
+
+---
+
+## 1. System Preparation
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -14,7 +29,7 @@ sudo apt install -y git curl build-essential ufw nginx
 
 ---
 
-## **2. Install Node.js, npm, and PM2**
+## 2. Install Node.js, npm, and PM2
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
@@ -24,7 +39,7 @@ sudo npm install -g pm2
 
 ---
 
-## **3. Install MongoDB**
+## 3. Install MongoDB
 
 ```bash
 wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
@@ -37,74 +52,73 @@ sudo systemctl start mongod
 
 ---
 
-## **4. Create MongoDB Users and Enable Auth**
+## 4. Configure MongoDB Authentication
 
-```bash
-mongosh
-```
-In the shell:
-```js
-use admin
-db.createUser({
-  user: "admin",
-  pwd: "your-admin-password",
-  roles: [ { role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase" ]
-})
+1. **Create admin and application users:**
+    ```bash
+    mongosh
+    ```
+    ```js
+    use admin
+    db.createUser({
+      user: "admin",
+      pwd: "your-admin-password",
+      roles: [ { role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase" ]
+    })
 
-use restrict_app
-db.createUser({
-  user: "restrict_user",
-  pwd: "random",
-  roles: [ { role: "readWrite", db: "restrict_app" } ]
-})
-exit
-```
+    use restrict_app
+    db.createUser({
+      user: "restrict_user",
+      pwd: "random",
+      roles: [ { role: "readWrite", db: "restrict_app" } ]
+    })
+    exit
+    ```
 
-Edit MongoDB config:
-```bash
-sudo nano /etc/mongod.conf
-```
-Add or edit:
-```yaml
-security:
-  authorization: enabled
-net:
-  port: 27017
-  bindIp: 0.0.0.0
-```
-Save and exit, then restart:
-```bash
-sudo systemctl restart mongod
-```
+2. **Enable authentication:**
+    ```bash
+    sudo nano /etc/mongod.conf
+    ```
+    Add or edit:
+    ```yaml
+    security:
+      authorization: enabled
+    net:
+      port: 27017
+      bindIp: 127.0.0.1
+    ```
+    > **Note:** `bindIp: 127.0.0.1` ensures MongoDB is only accessible locally.
+
+3. **Restart MongoDB:**
+    ```bash
+    sudo systemctl restart mongod
+    ```
 
 ---
 
-## **5. Set Up Firewall (Only Open 22, 443, 27017)**
+## 5. Configure Firewall
 
 ```bash
 sudo ufw allow OpenSSH
 sudo ufw allow 443
-sudo ufw allow 27017
 sudo ufw enable
 ```
-- **Do NOT open port 80.**
+> **Only ports 22 (SSH) and 443 (HTTPS) are open. Port 27017 is NOT open.**
 
 ---
 
-## **6. Place Your SSL Wildcard Certificate**
+## 6. Place SSL Certificate
 
-Copy your wildcard certificate and key to the server:
 ```bash
 sudo mkdir -p /etc/ssl/yourdomain
 sudo cp yourdomain.com.crt /etc/ssl/yourdomain/
 sudo cp yourdomain.com.key /etc/ssl/yourdomain/
-# If you have a CA bundle:
-sudo cp ca-bundle.crt /etc/ssl/yourdomain/
+sudo cp ca-bundle.crt /etc/ssl/yourdomain/   # If provided
 ```
 
 ---
 
-## **7. Clone Your Project**
+## 7. Clone the Project
 
 ```bash
 cd /opt
@@ -115,7 +129,7 @@ cd ER_Linux
 
 ---
 
-## **8. Place Your .env Files**
+## 8. Place .env Files
 
 - Copy your `.env` files to:
   - `/opt/ER_Linux/server/.env`
@@ -123,7 +137,7 @@ cd ER_Linux
 
 ---
 
-## **9. Install and Start Backend**
+## 9. Install and Start Backend
 
 ```bash
 cd /opt/ER_Linux/server
@@ -134,7 +148,7 @@ pm2 save
 
 ---
 
-## **10. Build Frontend**
+## 10. Build Frontend
 
 ```bash
 cd /opt/ER_Linux/frontend
@@ -144,13 +158,12 @@ npm run build
 
 ---
 
-## **11. Configure Nginx for HTTPS Only**
+## 11. Configure Nginx for HTTPS
 
 ```bash
 sudo nano /etc/nginx/sites-available/erapp
 ```
-Paste this (replace `erapp.yourdomain.com` and cert paths as needed):
-
+Paste:
 ```nginx
 server {
     listen 443 ssl;
@@ -176,8 +189,7 @@ server {
     }
 }
 ```
-
-**Enable the config and reload Nginx:**
+Enable and reload:
 ```bash
 sudo ln -s /etc/nginx/sites-available/erapp /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -186,9 +198,9 @@ sudo systemctl reload nginx
 
 ---
 
-## **12. Update Backend CORS Origin**
+## 12. Update Backend CORS Origin
 
-**In `server/index.js`, set:**
+In `/opt/ER_Linux/server/index.js`:
 ```js
 app.use(cors({
   origin: 'https://erapp.yourdomain.com',
@@ -198,7 +210,7 @@ app.use(cors({
 
 ---
 
-## **13. (Optional) PM2 Startup on Boot**
+## 13. (Optional) Enable PM2 Startup on Boot
 
 ```bash
 pm2 startup
@@ -208,44 +220,31 @@ pm2 save
 
 ---
 
-## **14. Test Your App**
+## 14. Test the Application
 
-- Open a browser and go to:  
-  `https://erapp.yourdomain.com`
-- You should see your app, and the browser should show a secure (padlock) icon.
-
----
-
-## **15. (Optional) MongoDB Compass**
-
-- Use:  
-  ```
-  mongodb://restrict_user:random@erapp.yourdomain.com:27017/restrict_app
-  ```
-  or  
-  ```
-  mongodb://restrict_user:random@<server-ip>:27017/restrict_app
-  ```
-  (if you want to connect from your internal network)
+- Open: `https://erapp.yourdomain.com`
+- Ensure the browser shows a secure (padlock) icon and the app loads.
 
 ---
 
-# **Summary Table**
+## 15. Security Notes
 
-| Step                | Command/Action                                      |
-|---------------------|-----------------------------------------------------|
-| System prep         | `sudo apt update && sudo apt upgrade -y`            |
-| Node/PM2            | Install as above                                    |
-| MongoDB             | Install, create users, enable auth                  |
-| Firewall            | Only open 22, 443, 27017                            |
-| SSL cert            | Place in `/etc/ssl/yourdomain/`                     |
-| Clone repo          | `git clone ...`                                     |
-| Place .env files    | Copy to `/server` and `/frontend`                   |
-| Backend             | `npm install`, `pm2 start index.js`                 |
-| Frontend            | `npm install`, `npm run build`                      |
-| Nginx config        | Use above, only listen on 443                       |
-| Enable Nginx site   | `ln -s ...`, `nginx -t`, `systemctl reload nginx`   |
-| Backend CORS        | Set to `https://erapp.yourdomain.com`               |
-| Test app            | Visit `https://erapp.yourdomain.com`                |
+- Only ports 22 and 443 are open.
+- MongoDB is only accessible locally (`127.0.0.1`).
+- All traffic is encrypted via HTTPS.
+- No HTTP (port 80) is available.
 
 ---
+
+## Troubleshooting
+
+- **Nginx errors:**  
+  Check with `sudo nginx -t` and `sudo tail -f /var/log/nginx/error.log`
+- **Backend errors:**  
+  Check with `pm2 logs er-backend`
+- **MongoDB errors:**  
+  Check with `sudo journalctl -u mongod`
+
+---
+
+**End of Guide**
