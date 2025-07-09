@@ -62,7 +62,7 @@ const transporter = nodemailer.createTransport({
 
 const app = express()
 app.use(cors({ 
-  origin: 'http://10.91.41.16',  // Allows all origins
+  origin: 'https://10.91.41.16',  // Allows all origins // Allows all origins // https://erapp.religare.in
   credentials: true }));
 app.use(express.json({ limit: '50mb' }));
 
