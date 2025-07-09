@@ -13,8 +13,8 @@ This guide describes how to deploy the ER_Linux application (React frontend, Nod
 ## Prerequisites
 
 - Ubuntu 22.04.5 server with a static internal IP (e.g., `10.91.41.16`)
-- Wildcard SSL certificate (`*.yourdomain.com`) from your CA
-- DNS record for your subdomain (e.g., `erapp.yourdomain.com`) pointing to your server
+- Wildcard SSL certificate (`*.religare.in`) from your CA
+- DNS record for your subdomain (e.g., `erapp.religare.in`) pointing to your server
 - Git access to your project repository
 - `.env` files for backend and frontend, properly configured
 
@@ -122,7 +122,7 @@ sudo cp ca-bundle.crt /etc/ssl/yourdomain/   # If provided
 
 ```bash
 cd /opt
-sudo git clone <your-repo-url> ER_Linux
+sudo git clone <repo-url> ER_Linux
 sudo chown -R $USER:$USER ER_Linux
 cd ER_Linux
 ```
@@ -167,11 +167,11 @@ Paste:
 ```nginx
 server {
     listen 443 ssl;
-    server_name erapp.yourdomain.com;
+    server_name erapp.religare.in;
 
-    ssl_certificate /etc/ssl/yourdomain/yourdomain.com.crt;
-    ssl_certificate_key /etc/ssl/yourdomain/yourdomain.com.key;
-    ssl_trusted_certificate /etc/ssl/yourdomain/ca-bundle.crt;  # If provided
+    ssl_certificate /etc/ssl/religare/religare.in.crt;
+    ssl_certificate_key /etc/ssl/religare/religare.com.key;
+    ssl_trusted_certificate /etc/ssl/religare/ca-bundle.crt;  # If provided
 
     root /opt/ER_Linux/frontend/build;
     index index.html;
@@ -203,7 +203,7 @@ sudo systemctl reload nginx
 In `/opt/ER_Linux/server/index.js`:
 ```js
 app.use(cors({
-  origin: 'https://erapp.yourdomain.com',
+  origin: 'https://erapp.religare.in',
   credentials: true
 }));
 ```
@@ -222,7 +222,7 @@ pm2 save
 
 ## 14. Test the Application
 
-- Open: `https://erapp.yourdomain.com`
+- Open: `https://erapp.religaer.in`
 - Ensure the browser shows a secure (padlock) icon and the app loads.
 
 ---
@@ -247,4 +247,4 @@ pm2 save
 
 ---
 
-**End of Guide**
+**Shukriya 🤞**
