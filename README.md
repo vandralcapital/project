@@ -1,17 +1,11 @@
-**Assumptions:**  
-- Server IP: `10.91.41.16`  
-- MongoDB runs locally  
-- Internal-only deployment  
-- You want to use MongoDB Compass for DB management  
-- Your repo is private and you have access
 
 ---
 
-# **Step-by-Step Deployment Guide (with Real Values)**
+# **Production Deployment Guide (Ubuntu 22.04.5)**
 
 ---
 
-## **1. Update and Install System Packages**
+## **1. Update and Install Essentials**
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -30,7 +24,7 @@ sudo npm install -g pm2
 
 ---
 
-## **3. Install MongoDB Community Edition**
+## **3. Install MongoDB**
 
 ```bash
 wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
@@ -40,19 +34,23 @@ sudo apt install -y mongodb-org
 sudo systemctl enable mongod
 sudo systemctl start mongod
 ```
-- **Check status:**  
-  `sudo systemctl status mongod`
 
 ---
 
-## **4. Create MongoDB User for Your App**
+## **4. Create MongoDB Users and Enable Auth**
 
-Open the MongoDB shell:
 ```bash
 mongosh
 ```
-Run the following commands:
+In the shell:
 ```js
+use admin
+db.createUser({
+  user: "admin",
+  pwd: "your-admin-password",
+  roles: [ { role: "userAdminAnyDatabase", db: "admin" }, "readWriteAnyDatabase" ]
+})
+
 use restrict_app
 db.createUser({
   user: "restrict_user",
@@ -62,50 +60,38 @@ db.createUser({
 exit
 ```
 
----
-
-## **5. Allow MongoDB Remote Access for Compass (Optional, Internal Only)**
-
 Edit MongoDB config:
 ```bash
 sudo nano /etc/mongod.conf
 ```
-- Find `bindIp: 127.0.0.1` and change to:
-  ```
+Add or edit:
+```yaml
+security:
+  authorization: enabled
+net:
+  port: 27017
   bindIp: 0.0.0.0
-  ```
-- Save and exit, then restart MongoDB:
-  ```bash
-  sudo systemctl restart mongod
-  ```
-
-**(Security Note: Only do this if your server is firewalled and only accessible internally!)**
+```
+Save and exit, then restart:
+```bash
+sudo systemctl restart mongod
+```
 
 ---
 
-## **6. Set Up Firewall**
+## **5. Set Up Firewall**
 
 ```bash
 sudo ufw allow OpenSSH
 sudo ufw allow 80
 sudo ufw allow 443
-sudo ufw allow 27017    # For MongoDB Compass (internal only)
+sudo ufw allow 27017
 sudo ufw enable
 ```
 
 ---
 
-## **7. Install Nginx**
-
-```bash
-sudo apt install -y nginx
-sudo systemctl enable nginx
-sudo systemctl start nginx
-```
-
----
-
-## **8. Clone Your Project**
+## **6. Clone Your Project**
 
 ```bash
 cd /opt
@@ -116,29 +102,15 @@ cd ER_Linux
 
 ---
 
-## **9. Place Your .env Files**
+## **7. Place Your .env Files**
 
-**/opt/ER_Linux/server/.env**
-```env
-MONGODB_URI=mongodb://restrict_user:random@localhost:27017/restrict_app
-JWT_SECRET=your-very-secret-key
-LDAP_URL=ldap://10.91.50.11:389
-SMTP_HOST=mail.religare.com
-SMTP_PORT=25
-SMTP_SECURE=false
-EMAIL_USER=your-email@yourdomain.com
-EMAIL_PASSWORD=your-email-password
-PORT=3000
-```
-
-**/opt/ER_Linux/frontend/.env**
-```env
-REACT_APP_API_URL=/api
-```
+- Copy your `.env` files to:
+  - `/opt/ER_Linux/server/.env`
+  - `/opt/ER_Linux/frontend/.env`
 
 ---
 
-## **10. Install Backend Dependencies and Start Backend**
+## **8. Install and Start Backend**
 
 ```bash
 cd /opt/ER_Linux/server
@@ -146,22 +118,20 @@ npm install
 pm2 start index.js --name er-backend
 pm2 save
 ```
-- **Check logs:** `pm2 logs er-backend`
 
 ---
 
-## **11. Install Frontend Dependencies and Build**
+## **9. Build Frontend**
 
 ```bash
 cd /opt/ER_Linux/frontend
 npm install
 npm run build
 ```
-- The build output will be in `/opt/ER_Linux/frontend/build`
 
 ---
 
-## **12. Configure Nginx as a Reverse Proxy**
+## **10. Configure Nginx Reverse Proxy**
 
 ```bash
 sudo nano /etc/nginx/sites-available/er_linux
@@ -197,7 +167,19 @@ sudo systemctl reload nginx
 
 ---
 
-## **13. (Optional) Set Up PM2 Startup Script**
+## **11. Test Everything**
+
+- **App:** Open `http://10.91.41.16` in your browser.
+- **Backend:** Check with `pm2 logs er-backend`
+- **MongoDB Compass:**  
+  Use:  
+  ```
+  mongodb://restrict_user:random@10.91.41.16:27017/restrict_app
+  ```
+
+---
+
+## **12. (Optional) PM2 Startup on Boot**
 
 ```bash
 pm2 startup
@@ -207,43 +189,10 @@ pm2 save
 
 ---
 
-## **14. Access Your App**
-
-- **App:**  
-  Open a browser on your internal network:  
-  `http://10.91.41.16`
-
-- **MongoDB Compass:**  
-  - Connection string:  
-    ```
-    mongodb://restrict_user:random@10.91.41.16:27017/restrict_app
-    ```
-  - Use this in MongoDB Compass from your workstation (must be on the same internal network).
-
----
-
-## **15. (Optional) Secure MongoDB**
-
-- If you only want Compass access from certain IPs, restrict port 27017 in your firewall:
-  ```bash
-  sudo ufw allow from <your-workstation-ip> to any port 27017
-  sudo ufw deny 27017
-  ```
-
----
-
-## **16. (Optional) Enable HTTPS**
-
-- For internal use, you can use a self-signed certificate or your organization’s internal CA.
-- Update Nginx config to listen on 443 and use SSL.
-
----
-
 # **You’re Done!**
 
-- App is live at: `http://10.91.41.16`
-- MongoDB Compass can connect at: `mongodb://restrict_user:random@10.91.41.16:27017/restrict_app`
-- Backend runs on PM2, frontend is served by Nginx, and all traffic is internal.
+- App is live at `http://10.91.41.16`
+- Backend is running and protected with MongoDB auth
+- MongoDB Compass can connect using the credentials above
 
 ---
-Shukriya 😊
