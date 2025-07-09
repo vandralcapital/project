@@ -1,11 +1,11 @@
 
 ---
 
-# **Production Deployment Guide (Ubuntu 22.04.5)**
+# **Full Secure Deployment Guide (HTTPS Only, Ubuntu 22.04.5)**
 
 ---
 
-## **1. Update and Install Essentials**
+## **1. Prepare Your Server**
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -79,19 +79,32 @@ sudo systemctl restart mongod
 
 ---
 
-## **5. Set Up Firewall**
+## **5. Set Up Firewall (Only Open 22, 443, 27017)**
 
 ```bash
 sudo ufw allow OpenSSH
-sudo ufw allow 80
 sudo ufw allow 443
 sudo ufw allow 27017
 sudo ufw enable
 ```
+- **Do NOT open port 80.**
 
 ---
 
-## **6. Clone Your Project**
+## **6. Place Your SSL Wildcard Certificate**
+
+Copy your wildcard certificate and key to the server:
+```bash
+sudo mkdir -p /etc/ssl/yourdomain
+sudo cp yourdomain.com.crt /etc/ssl/yourdomain/
+sudo cp yourdomain.com.key /etc/ssl/yourdomain/
+# If you have a CA bundle:
+sudo cp ca-bundle.crt /etc/ssl/yourdomain/
+```
+
+---
+
+## **7. Clone Your Project**
 
 ```bash
 cd /opt
@@ -102,7 +115,7 @@ cd ER_Linux
 
 ---
 
-## **7. Place Your .env Files**
+## **8. Place Your .env Files**
 
 - Copy your `.env` files to:
   - `/opt/ER_Linux/server/.env`
@@ -110,7 +123,7 @@ cd ER_Linux
 
 ---
 
-## **8. Install and Start Backend**
+## **9. Install and Start Backend**
 
 ```bash
 cd /opt/ER_Linux/server
@@ -121,7 +134,7 @@ pm2 save
 
 ---
 
-## **9. Build Frontend**
+## **10. Build Frontend**
 
 ```bash
 cd /opt/ER_Linux/frontend
@@ -131,16 +144,21 @@ npm run build
 
 ---
 
-## **10. Configure Nginx Reverse Proxy**
+## **11. Configure Nginx for HTTPS Only**
 
 ```bash
-sudo nano /etc/nginx/sites-available/er_linux
+sudo nano /etc/nginx/sites-available/erapp
 ```
-Paste:
+Paste this (replace `erapp.yourdomain.com` and cert paths as needed):
+
 ```nginx
 server {
-    listen 80;
-    server_name 10.91.41.16;
+    listen 443 ssl;
+    server_name erapp.yourdomain.com;
+
+    ssl_certificate /etc/ssl/yourdomain/yourdomain.com.crt;
+    ssl_certificate_key /etc/ssl/yourdomain/yourdomain.com.key;
+    ssl_trusted_certificate /etc/ssl/yourdomain/ca-bundle.crt;  # If provided
 
     root /opt/ER_Linux/frontend/build;
     index index.html;
@@ -158,28 +176,29 @@ server {
     }
 }
 ```
-Enable and reload:
+
+**Enable the config and reload Nginx:**
 ```bash
-sudo ln -s /etc/nginx/sites-available/er_linux /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/erapp /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
 ---
 
-## **11. Test Everything**
+## **12. Update Backend CORS Origin**
 
-- **App:** Open `http://10.91.41.16` in your browser.
-- **Backend:** Check with `pm2 logs er-backend`
-- **MongoDB Compass:**  
-  Use:  
-  ```
-  mongodb://restrict_user:random@10.91.41.16:27017/restrict_app
-  ```
+**In `server/index.js`, set:**
+```js
+app.use(cors({
+  origin: 'https://erapp.yourdomain.com',
+  credentials: true
+}));
+```
 
 ---
 
-## **12. (Optional) PM2 Startup on Boot**
+## **13. (Optional) PM2 Startup on Boot**
 
 ```bash
 pm2 startup
@@ -189,10 +208,44 @@ pm2 save
 
 ---
 
-# **You’re Done!**
+## **14. Test Your App**
 
-- App is live at `http://10.91.41.16`
-- Backend is running and protected with MongoDB auth
-- MongoDB Compass can connect using the credentials above
+- Open a browser and go to:  
+  `https://erapp.yourdomain.com`
+- You should see your app, and the browser should show a secure (padlock) icon.
+
+---
+
+## **15. (Optional) MongoDB Compass**
+
+- Use:  
+  ```
+  mongodb://restrict_user:random@erapp.yourdomain.com:27017/restrict_app
+  ```
+  or  
+  ```
+  mongodb://restrict_user:random@<server-ip>:27017/restrict_app
+  ```
+  (if you want to connect from your internal network)
+
+---
+
+# **Summary Table**
+
+| Step                | Command/Action                                      |
+|---------------------|-----------------------------------------------------|
+| System prep         | `sudo apt update && sudo apt upgrade -y`            |
+| Node/PM2            | Install as above                                    |
+| MongoDB             | Install, create users, enable auth                  |
+| Firewall            | Only open 22, 443, 27017                            |
+| SSL cert            | Place in `/etc/ssl/yourdomain/`                     |
+| Clone repo          | `git clone ...`                                     |
+| Place .env files    | Copy to `/server` and `/frontend`                   |
+| Backend             | `npm install`, `pm2 start index.js`                 |
+| Frontend            | `npm install`, `npm run build`                      |
+| Nginx config        | Use above, only listen on 443                       |
+| Enable Nginx site   | `ln -s ...`, `nginx -t`, `systemctl reload nginx`   |
+| Backend CORS        | Set to `https://erapp.yourdomain.com`               |
+| Test app            | Visit `https://erapp.yourdomain.com`                |
 
 ---
