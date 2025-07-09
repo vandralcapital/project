@@ -1,120 +1,101 @@
+
 ---
 
-## **1. Update and Install Dependencies**
+# **Step-by-Step Deployment Guide (Ubuntu 22.04.5)**
 
-```sh
+---
+
+## **1. Update and Install System Packages**
+
+```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl git build-essential
+sudo apt install -y git curl build-essential ufw nginx
 ```
 
 ---
 
-## **2. Install Node.js (LTS) and npm**
+## **2. Install Node.js, npm, and PM2**
 
-```sh
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+```bash
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
-node -v
-npm -v
-```
-
----
-
-## **3. Install PM2 Globally**
-
-```sh
 sudo npm install -g pm2
 ```
 
 ---
 
-## **4. Install MongoDB**
+## **3. (If Needed) Install MongoDB**
 
-If you want the official MongoDB Community Edition:
-
-```sh
+If you are running MongoDB on this server:
+```bash
 wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
 echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
 sudo apt update
 sudo apt install -y mongodb-org
-sudo systemctl start mongod
 sudo systemctl enable mongod
+sudo systemctl start mongod
 ```
+- **Check status:** `sudo systemctl status mongod`
 
-**Check status:**
-```sh
-sudo systemctl status mongod
+---
+
+## **4. Clone Your Project**
+
+```bash
+cd /opt
+sudo git clone <your-repo-url> ER_Linux
+sudo chown -R $USER:$USER ER_Linux
+cd ER_Linux
 ```
 
 ---
 
-## **5. (Optional) Install MongoDB Compass**
+## **5. Place Your `.env` Files**
 
-If you want Compass on the server, download the .deb from [MongoDB Compass Download](https://www.mongodb.com/try/download/compass) and install:
-
-```sh
-wget https://downloads.mongodb.com/compass/mongodb-compass_1.42.3_amd64.deb
-sudo dpkg -i mongodb-compass_1.42.3_amd64.deb
-```
+- Copy your **perfect** `.env` files into:
+  - `/opt/ER_Linux/server/.env`
+  - `/opt/ER_Linux/frontend/.env`
 
 ---
 
-## **6. Clone Your Project and Install Dependencies**
+## **6. Install Backend Dependencies and Start Backend**
 
-```sh
-git clone https://github.com/SomethingForWork/ER_Linux.git
-cd ER_Linux/server
+```bash
+cd /opt/ER_Linux/server
 npm install
-cd ../frontend
-npm install
-```
-
----
-
-## **7. Build the React Frontend**
-
-```sh
-npm run build
-```
-This will create a `build/` directory in `frontend/`.
-
----
-
-## **8. Configure Backend Environment**
-
-- Set up your `.env` or `config.js` in `server/config/` as needed (DB connection, JWT secret, etc.).
-- Make sure MongoDB credentials in `server/index.js` match your MongoDB setup.
-
----
-
-## **9. Start the Backend with PM2**
-
-```sh
-cd /path/to/ER_Linux/server
 pm2 start index.js --name er-backend
 pm2 save
-pm2 startup
 ```
+- **Check logs:** `pm2 logs er-backend`
 
 ---
 
-## **10. Serve the React Build with Nginx**
+## **7. Install Frontend Dependencies and Build**
 
-### **Install Nginx:**
-```sh
-sudo apt install -y nginx
+```bash
+cd /opt/ER_Linux/frontend
+npm install
+npm run build
+```
+- The build output will be in `/opt/ER_Linux/frontend/build`
+
+---
+
+## **8. Configure Nginx as a Reverse Proxy**
+
+**Create Nginx config:**
+```bash
+sudo nano /etc/nginx/sites-available/er_linux
 ```
 
-### **Configure Nginx:**
-Edit or create a config file, e.g., `/etc/nginx/sites-available/er_linux`:
-
+**Paste this (replace IP as needed):**
 ```nginx
 server {
     listen 80;
-    server_name your_domain_or_ip;
+    server_name 10.91.41.16;  # Use your server's internal IP
 
-    root /path/to/ER_Linux/frontend/build;
-    index index.html index.htm;
+    root /opt/ER_Linux/frontend/build;
+    index index.html;
 
     location / {
         try_files $uri /index.html;
@@ -131,7 +112,7 @@ server {
 ```
 
 **Enable the config:**
-```sh
+```bash
 sudo ln -s /etc/nginx/sites-available/er_linux /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
@@ -139,28 +120,60 @@ sudo systemctl reload nginx
 
 ---
 
-## **11. (Optional) Secure with SSL (Let's Encrypt)**
+## **9. Set Up Firewall**
 
-```sh
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your_domain
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw enable
 ```
+- **Port 3000 does NOT need to be open externally.**
 
 ---
 
-## **12. Check Everything**
+## **10. Test Your App**
 
-- **Frontend:** http://your_domain or http://your_server_ip
-- **Backend API:** http://your_domain/api/ (proxied)
-- **MongoDB:** `mongo` shell or Compass
+- Open a browser on your internal network:  
+  `http://10.91.41.16`
+- Log in and test all features.
+
+---
+
+## **11. (Optional) Set Up PM2 Startup Script**
+
+```bash
+pm2 startup
+# Follow the instructions printed to run the command as root
+pm2 save
+```
+- This ensures your backend restarts on server reboot.
 
 ---
 
-## **13. PM2 Management**
+## **12. (Optional) Enable HTTPS (Recommended for Security)**
 
-- View logs: `pm2 logs er-backend`
-- Restart: `pm2 restart er-backend`
-- Stop: `pm2 stop er-backend`
-- List: `pm2 list`
+- Obtain a certificate (internal CA or self-signed for internal use).
+- Update Nginx config to listen on 443 and use SSL.
 
 ---
+
+# **Summary Table**
+
+| Step                | Command/Action                                      |
+|---------------------|-----------------------------------------------------|
+| Update server       | `sudo apt update && sudo apt upgrade -y`            |
+| Install Node/PM2    | `sudo apt install -y nodejs npm` + `npm i -g pm2`   |
+| Install MongoDB     | See above                                           |
+| Install Nginx       | `sudo apt install -y nginx`                         |
+| Clone repo          | `git clone <repo-url>`                              |
+| Place .env files    | Copy to `/server` and `/frontend`                   |
+| Backend build/start | `npm install` + `pm2 start index.js`                |
+| Frontend build      | `npm install` + `npm run build`                     |
+| Nginx config        | See above                                           |
+| Firewall            | `sudo ufw allow 80 443`                             |
+| Test app            | Visit `http://<server-ip>`                          |
+
+---
+
+Shukriya 😊
