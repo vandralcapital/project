@@ -194,6 +194,26 @@ app.post("/createApplication", async (req, res) => {
     // Create a new App using the request body
     AppModel.create(newApplication)
       .then(async (app) => {
+        // Check if Application Admin user exists, if not, create one
+        let appAdmin = await UserModel.findOne({ email: adminEmail });
+        if (!appAdmin) {
+          appAdmin = new UserModel({
+            name: adminEmail.split('@')[0],
+            email: adminEmail,
+            password: adminEmail, // Default password is email, should be changed by user
+            role: 'app_admin',
+            status: true,
+            applicationId: app._id,
+            applicationName: app.appName
+          });
+          await appAdmin.save();
+        } else {
+          // Always update applicationId and applicationName for this admin
+          appAdmin.role = 'app_admin';
+          appAdmin.applicationId = app._id;
+          appAdmin.applicationName = app.appName;
+          await appAdmin.save();
+        }
 
         // Log the creation in ChangeLog
         const changeLogEntry = new ChangeLogModel({
@@ -368,6 +388,8 @@ app.post("/createApplication", async (req, res) => {
 
 
     app.post('/register', checkAuth, async (req, res) => {
+      console.log('DEBUG /register headers:', req.headers);
+      console.log('DEBUG /register req.user:', req.user);
       const newUser = {
         ...req.body,
         status: true,  // Set status to active
@@ -449,7 +471,9 @@ app.post("/login", async (req, res) => {
                             { 
                                 userId: user._id,
                                 email: user.email,
-                                role: user.role
+                                role: user.role,
+                                applicationId: user.applicationId,
+                                applicationName: user.applicationName
                             },
                             config.jwt.secret,
                             { expiresIn: config.jwt.expiresIn }
@@ -461,7 +485,9 @@ app.post("/login", async (req, res) => {
                                 id: user._id,
                                 name: user.name,
                                 email: user.email,
-                                role: user.role
+                                role: user.role,
+                                applicationId: user.applicationId,
+                                applicationName: user.applicationName
                             }
                         });
                     }
@@ -480,7 +506,9 @@ app.post("/login", async (req, res) => {
                         { 
                             userId: user._id,
                             email: user.email,
-                            role: user.role
+                            role: user.role,
+                            applicationId: user.applicationId,
+                            applicationName: user.applicationName
                         },
                         config.jwt.secret,
                         { expiresIn: config.jwt.expiresIn }
@@ -492,64 +520,73 @@ app.post("/login", async (req, res) => {
                             id: user._id,
                             name: user.name,
                             email: user.email,
-                            role: user.role
+                            role: user.role,
+                            applicationId: user.applicationId,
+                            applicationName: user.applicationName
                         }
+                    });
+                } else {
+                    return res.status(401).json({
+                        success: false,
+                        message: "Invalid email or password"
                     });
                 }
             }
-        }
-
-        // If user doesn't exist in MongoDB or authentication failed, try LDAP
-        try {
-            console.log('Attempting LDAP authentication for new user');
-            const isLDAPAuthenticated = await verifyLDAPCredentials(email, password);
-            
-            if (isLDAPAuthenticated) {
-                console.log('LDAP authentication successful');
+        } else {
+            // If user doesn't exist in MongoDB, try LDAP
+            try {
+                console.log('Attempting LDAP authentication for new user');
+                const isLDAPAuthenticated = await verifyLDAPCredentials(email, password);
                 
-                // Create new user in MongoDB if LDAP auth succeeds
-                user = new UserModel({
-                    email: email,
-                    name: email.split('@')[0],
-                    password: null,
-                    role: 'user',
-                    status: true,
-                    authType: 'ldap'
-                });
-                await user.save();
-                console.log('New user created in MongoDB');
+                if (isLDAPAuthenticated) {
+                    console.log('LDAP authentication successful');
+                    // Create new user in MongoDB if LDAP auth succeeds
+                    user = new UserModel({
+                        email: email,
+                        name: email.split('@')[0],
+                        password: null,
+                        role: 'user',
+                        status: true,
+                        authType: 'ldap'
+                    });
+                    await user.save();
+                    console.log('New user created in MongoDB');
 
-                const token = jwt.sign(
-                    { 
-                        userId: user._id,
-                        email: user.email,
-                        role: user.role
-                    },
-                    config.jwt.secret,
-                    { expiresIn: config.jwt.expiresIn }
-                );
+                    const token = jwt.sign(
+                        { 
+                            userId: user._id,
+                            email: user.email,
+                            role: user.role,
+                            applicationId: user.applicationId,
+                            applicationName: user.applicationName
+                        },
+                        config.jwt.secret,
+                        { expiresIn: config.jwt.expiresIn }
+                    );
 
-                return res.json({
-                    success: true,
-                    token,
-                    user: {
-                        id: user._id,
-                        name: user.name,
-                        email: user.email,
-                        role: user.role
-                    }
-                });
+                    return res.json({
+                        success: true,
+                        token,
+                        user: {
+                            id: user._id,
+                            name: user.name,
+                            email: user.email,
+                            role: user.role,
+                            applicationId: user.applicationId,
+                            applicationName: user.applicationName
+                        }
+                    });
+                }
+            } catch (ldapError) {
+                console.error('LDAP authentication failed:', ldapError);
             }
-        } catch (ldapError) {
-            console.error('LDAP authentication failed:', ldapError);
+
+            // If all authentication attempts fail
+            return res.status(401).json({
+                success: false,
+                message: "Invalid email or password"
+            });
         }
-
-        // If all authentication attempts fail
-        return res.status(401).json({
-            success: false,
-            message: "Invalid email or password"
-        });
-
     } catch (error) {
         console.error('Login error:', error);
         return res.status(500).json({
@@ -640,8 +677,23 @@ app.get("/frequency", async (req, res) => {
 
 
 
-app.post('/employee', async (req, res) => {
+app.post('/employee', checkAuth, async (req, res) => {
   console.log('Received employee data:', req.body); // Debug log
+  // Allow both admin (super admin) and app_admin (application admin) to create employees
+  if (!req.user || (req.user.role !== 'app_admin' && req.user.role !== 'admin')) {
+    return res.status(403).json({ message: 'Forbidden: Only Admins and Application Admins can create employees.' });
+  }
+  const { applicationName } = req.body;
+  if (!applicationName) {
+    return res.status(400).json({ message: 'Missing required field: applicationName' });
+  }
+  // If user is app_admin, check that the logged-in user is the admin for this application
+  if (req.user.role === 'app_admin') {
+    const app = await AppModel.findOne({ appName: applicationName });
+    if (!app || app.adminEmail !== req.user.email) {
+      return res.status(403).json({ message: 'Forbidden: You are not the admin for this application.' });
+    }
+  }
   // Ensure a default status of true (Enabled) is set, allow explicit false
   const newEmployeeData = {
     ...req.body,
@@ -649,18 +701,16 @@ app.post('/employee', async (req, res) => {
   };
   EmployeeModel.create(newEmployeeData)
     .then(async (employee) => {
-
-        // Log the creation in ChangeLog
-        const changeLogEntry = new ChangeLogModel({
-          userId: null, // User ID is null as authentication is removed
-          actionType: 'Create',
-          documentModel: 'Employee',
-          documentId: employee._id,
-        });
-        await changeLogEntry.save();
-        console.log(`Change logged: Created Employee ${employee._id} by user unknown`);
-
-        res.json(employee)
+      // Log the creation in ChangeLog
+      const changeLogEntry = new ChangeLogModel({
+        userId: null, // User ID is null as authentication is removed
+        actionType: 'Create',
+        documentModel: 'Employee',
+        documentId: employee._id,
+      });
+      await changeLogEntry.save();
+      console.log(`Change logged: Created Employee ${employee._id} by user unknown`);
+      res.json(employee)
     })
     .catch(err => res.status(500).json({ error: err.message })); 
 });
@@ -890,9 +940,33 @@ app.post('/audit', async (req, res) => {
   };
 
   console.log('Saving manual audit with data:', newReview); // Add this log for manual creation route
-  const audit = await AuditModel.create(newReview)
-  .then(audit => res.json(audit)) 
-  .catch(err => res.status(500).json({ error: err.message })); 
+  try {
+    const audit = await AuditModel.create(newReview);
+
+    // --- Email Notification Logic ---
+    // Fetch reviewer (HOD) email
+    const reviewer = await UserModel.findById(newReview.user_id);
+    const employee = await EmployeeModel.findById(newReview.emp_id);
+    const application = await AppModel.findById(newReview.application_id);
+
+    if (reviewer && reviewer.email) {
+      const subject = 'Entitlement Review Notification';
+      const html = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>Entitlement Review Required</h2>
+          <p>Dear Reviewer,</p>
+          <p>A new review has been created for employee <b>${employee ? employee.name : ''}</b> in application <b>${application ? application.appName : ''}</b>.</p>
+          <p>Please log in to the system to review the entitlements.</p>
+          <p>Best regards,<br>ER Admin</p>
+        </div>
+      `;
+      await sendEmail({ to: reviewer.email, subject, html });
+    }
+
+    res.json(audit);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/pendingAudits", async (req, res) => {
@@ -987,14 +1061,21 @@ app.get("/pastAudits", async (req, res) => {
 
 
 
-app.post('/excelUpload', async (req, res) => {
+app.post('/excelUpload', checkAuth, async (req, res) => {
+  console.log('UPLOAD: req.user:', req.user); // DEBUG LOG
   const data = req.body;
   let errorArr = [];
   let processedEmployees = [];
   let reviewerEmail = null;
 
+  // Restrict to app_admins only
+  if (!req.user || req.user.role !== 'app_admin') {
+    return res.status(403).json({ message: 'Forbidden: Only Application Admins can upload reviews.' });
+  }
+
   try {
-    for (const row of data) {
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
       try {
         // Extract required fields
         const applicationName = row['Application'];
@@ -1003,28 +1084,34 @@ app.post('/excelUpload', async (req, res) => {
         reviewerEmail = hodEmail; // For summary email later
 
         if (!applicationName || !employeeEmail || !hodEmail) {
-          errorArr.push({ error: `Missing required fields in row: ${JSON.stringify(row)}` });
+          errorArr.push({ row: i + 2, error: `Missing required fields in row: ${JSON.stringify(row)}` }); // +2 for Excel row number
           continue;
         }
 
         // Find application
         const app = await AppModel.findOne({ appName: applicationName });
         if (!app) {
-          errorArr.push({ error: `Application not found: ${applicationName}` });
+          errorArr.push({ row: i + 2, error: `Application not found: ${applicationName}` });
+          continue;
+        }
+
+        // Restrict to app_admin's own application
+        if (app.adminEmail !== req.user.email) {
+          errorArr.push({ row: i + 2, error: `You are not the admin for application: ${applicationName}` });
           continue;
         }
 
         // Find employee
         const employee = await EmployeeModel.findOne({ email: employeeEmail });
         if (!employee) {
-          errorArr.push({ error: `Employee not found: ${employeeEmail}` });
+          errorArr.push({ row: i + 2, error: `Employee not found: ${employeeEmail}` });
           continue;
         }
 
         // Find reviewer (HOD)
         const reviewer = await UserModel.findOne({ email: hodEmail });
         if (!reviewer) {
-          errorArr.push({ error: `Reviewer (HOD) not found: ${hodEmail}` });
+          errorArr.push({ row: i + 2, error: `Reviewer (HOD) not found: ${hodEmail}` });
           continue;
         }
 
@@ -1032,7 +1119,7 @@ app.post('/excelUpload', async (req, res) => {
         const rightsData = {};
         for (const key in row) {
           // Skip non-rights columns
-          if (['Application', 'Email ID', 'HOD', 'Emp Name'].includes(key)) {
+          if (["Application", "Email ID", "HOD", "Emp Name"].includes(key)) {
             continue;
           }
           // Store the right value if it exists
@@ -1054,7 +1141,7 @@ app.post('/excelUpload', async (req, res) => {
         await audit.save();
         processedEmployees.push({ employee: employeeEmail, reviewer: hodEmail, application: applicationName });
       } catch (rowError) {
-        errorArr.push({ error: rowError.message });
+        errorArr.push({ row: i + 2, error: rowError.message });
       }
     }
 
@@ -1073,7 +1160,7 @@ app.post('/excelUpload', async (req, res) => {
         `;
         await sendEmail({ to: reviewerEmail, subject, html });
       } catch (emailError) {
-        errorArr.push({ error: 'Failed to send email: ' + emailError.message });
+        errorArr.push({ row: null, error: 'Failed to send email: ' + emailError.message });
       }
     }
 
@@ -1126,6 +1213,30 @@ app.put('/apps/:id', checkAuth, async (req, res) => {
   try {
     const appId = req.params.id;
     const updateData = req.body;
+
+    // If adminEmail is being changed or set, ensure user exists and is app_admin
+    if (updateData.adminEmail) {
+      // Find the app to get its name
+      const app = await AppModel.findById(appId);
+      let appAdmin = await UserModel.findOne({ email: updateData.adminEmail });
+      if (!appAdmin) {
+        appAdmin = new UserModel({
+          name: updateData.adminEmail.split('@')[0],
+          email: updateData.adminEmail,
+          password: updateData.adminEmail, // Default password is email, should be changed by user
+          role: 'app_admin',
+          status: true,
+          applicationId: app ? app._id : undefined,
+          applicationName: app ? app.appName : undefined
+        });
+        await appAdmin.save();
+      } else {
+        appAdmin.role = 'app_admin';
+        appAdmin.applicationId = app ? app._id : undefined;
+        appAdmin.applicationName = app ? app.appName : undefined;
+        await appAdmin.save();
+      }
+    }
 
     // Use findOneAndUpdate to trigger the logging middleware
     const updatedApp = await AppModel.findOneAndUpdate(
@@ -1567,11 +1678,47 @@ app.get('/completedReviews', checkAuth, async (req, res) => {
       const employees = await EmployeeModel.find({ user_id: user._id });
       const employeeIds = employees.map(e => e._id);
       reviews = await CompletedReview.find({ employeeId: { $in: employeeIds } }).sort({ submittedAt: -1 });
+    } else if (user.role === 'app_admin') {
+      // App Admin: only see reviews for their own application(s)
+      // Find all applications where adminEmail matches user.email
+      const apps = await AppModel.find({ adminEmail: user.email });
+      const appNames = apps.map(a => a.appName);
+      console.log('APP_ADMIN completedReviews:', { email: user.email, appNames }); // DEBUG LOG
+      reviews = await CompletedReview.find({ applicationName: { $in: appNames } }).sort({ submittedAt: -1 });
     } else {
       reviews = [];
     }
     res.json(reviews);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch completed reviews', error: err.message });
+  }
+});
+
+app.post('/convertToReviewer', async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    if (!email || !name) {
+      return res.status(400).json({ message: 'Name and email are required.' });
+    }
+    // Find or create the reviewer (hod)
+    let reviewer = await UserModel.findOne({ email });
+    if (!reviewer) {
+      reviewer = new UserModel({
+        name,
+        email,
+        password: email, // Default password, should be changed by user
+        role: 'hod',
+        status: true
+      });
+      await reviewer.save();
+    } else if (reviewer.role !== 'hod') {
+      reviewer.role = 'hod';
+      await reviewer.save();
+    }
+    // Do NOT update the employee's user_id field
+    res.json({ message: 'Employee converted to Reviewer successfully.' });
+  } catch (err) {
+    console.error('Error in /convertToReviewer:', err);
+    res.status(500).json({ message: 'Failed to convert employee to reviewer.', error: err.message });
   }
 });

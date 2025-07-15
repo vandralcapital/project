@@ -12,6 +12,7 @@ const HodIndex = () => {
     name: '',
     email: '',
   });
+  const [formError, setFormError] = useState("");
 
   const fetchHods = async () => {
     try {
@@ -49,6 +50,12 @@ const HodIndex = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validation: Name and Email must not be empty
+    if (!formData.name.trim() || !formData.email.trim()) {
+      setFormError("Name and Email cannot be empty.");
+      return;
+    }
+    setFormError("");
     try {
       console.log('Sending update data:', formData);
       const response = await axios.put(`${process.env.REACT_APP_API_URL}/hods/${selectedHod._id}`, formData);
@@ -70,7 +77,7 @@ const HodIndex = () => {
       <div className="content-wrapper">
         <Sidebar />
         <div className="container mt-5">
-          <h2>HOD/Reviewer List</h2>
+          <h2>HOD</h2>
           <a href='/hodcreate'>
             <button  className='btn btn-md text-white' style={{backgroundColor: "#167340"}}>Create New HOD/Reviewer</button>
           </a>
@@ -97,10 +104,10 @@ const HodIndex = () => {
                 hods.map((hod) => (
                   <tr key={hod._id}>
                     <td>
-                      {hod.name}
+                      {hod.name ? hod.name : "N/A"}
                     </td>
                     <td>
-                      {hod.email}
+                      {hod.email ? hod.email : "N/A"}
                     </td>
                     <td>
                       {Array.isArray(hod.employees) && hod.employees.length > 0
@@ -129,6 +136,7 @@ const HodIndex = () => {
                 <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
               </div>
               <div className="modal-body">
+                {formError && <div className="alert alert-danger">{formError}</div>}
                 <form onSubmit={handleSubmit}>
                   <div className="mb-3">
                     <label className="form-label">Name</label>

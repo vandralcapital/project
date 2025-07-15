@@ -5,6 +5,46 @@ import Sidebar from '../components/Sidebar';  // Assuming you have a Sidebar com
 // import PendingAuditList from '../audit/PendingAuditList'; // Remove this import
 import axios from 'axios';
 import { useAuth } from '../auth/AuthContext';
+import * as XLSX from 'xlsx';
+
+const CompletedReviewsTable = ({ reviews, rightsKeys }) => (
+  <table className="table">
+    <thead>
+      <tr>
+        <th>Employee Name</th>
+        {rightsKeys.map(key => (
+          <th key={key}>{key}</th>
+        ))}
+        <th>Reviewer Remarks</th>
+        <th>Action Taken</th>
+        <th>Reviewed By</th>
+        <th>Review Date,Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      {reviews.length > 0 ? (
+        reviews.map((review) => (
+          <tr key={review._id}>
+            <td>{review.employeeName || '-'}</td>
+            {rightsKeys.map(key => (
+              <td key={key}>
+                {review.menuRights && review.menuRights[key] ? review.menuRights[key] : '-'}
+              </td>
+            ))}
+            <td>{review.reviewerRemarks || '-'}</td>
+            <td>{review.actionTaken ? review.actionTaken.charAt(0).toUpperCase() + review.actionTaken.slice(1) : '-'}</td>
+            <td>{review.reviewerName || '-'}</td>
+            <td>{review.submittedAt ? new Date(review.submittedAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+          </tr>
+        ))
+      ) : (
+        <tr>
+          <td colSpan={7 + rightsKeys.length} className="text-center">No completed reviews found.</td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+);
 
 const Dashboard = () => {
   const [completedReviews, setCompletedReviews] = useState([]);
@@ -119,44 +159,7 @@ const Dashboard = () => {
             ))}
           </div>
           {error && <p className="text-danger">{error}</p>}
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Employee Name</th>
-                {rightsKeys.map(key => (
-                  <th key={key}>{key}</th>
-                ))}
-                <th>Reviewer Remarks</th>
-                <th>Action Taken</th>
-                <th>Reviewed By</th>
-                <th>Review Date,Time</th>
-                {/* <th>Completed By</th> */}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredReviews.length > 0 ? (
-                filteredReviews.map((review) => (
-                  <tr key={review._id}>
-                    <td>{review.employeeName || '-'}</td>
-                    {rightsKeys.map(key => (
-                      <td key={key}>
-                        {review.menuRights && review.menuRights[key] ? review.menuRights[key] : '-'}
-                      </td>
-                    ))}
-                    <td>{review.reviewerRemarks || '-'}</td>
-                    <td>{review.actionTaken ? review.actionTaken.charAt(0).toUpperCase() + review.actionTaken.slice(1) : '-'}</td>
-                    <td>{review.reviewerName || '-'}</td>
-                    <td>{review.submittedAt ? new Date(review.submittedAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</td>
-                    {/* <td>{review.reviewerName || 'N/A'}</td> */}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7 + rightsKeys.length} className="text-center">No completed reviews found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <CompletedReviewsTable reviews={filteredReviews} rightsKeys={rightsKeys} />
         </div>
       </div>
     </div>

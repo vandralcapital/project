@@ -70,9 +70,7 @@ function Login() {
                     </button>
                 </form>
                 {/* <p className="text-center mt-2">OR ?</p> */}
-                <Link to="/signup" className="btn btn-default border mt-2 w-100 bg-light">
-                    Signup
-                </Link>
+                {/* Signup button removed */}
             </div>
         </div>
     );

@@ -10,7 +10,13 @@ module.exports = async (req, res, next) => {
     }
     const decodedToken = jwt.verify(token, secretKey);
     // Try to get name from token, otherwise fetch from DB
-    let user = { _id: decodedToken.userId, email: decodedToken.email };
+    let user = {
+      _id: decodedToken.userId,
+      email: decodedToken.email,
+      role: decodedToken.role,
+      applicationId: decodedToken.applicationId,
+      applicationName: decodedToken.applicationName
+    };
     if (decodedToken.name) {
       user.name = decodedToken.name;
     } else {

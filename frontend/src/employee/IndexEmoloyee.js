@@ -84,6 +84,27 @@ const EmployeeIndex = () => {
     }
   };
 
+  // Add this function to handle conversion to Employee and Reviewer
+  const handleConvertToReviewer = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/convertToReviewer`, {
+        name: editForm.name,
+        email: editForm.email
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      // Optionally update the local state to reflect the new reviewer
+      fetchEmployees();
+      setError('');
+      alert('Employee converted to Reviewer successfully!');
+    } catch (err) {
+      setError('Failed to convert employee to reviewer.');
+    }
+  };
+
   // Fetch employees when the component mounts
   useEffect(() => {
     fetchEmployees();
@@ -95,7 +116,7 @@ const EmployeeIndex = () => {
       <div className="content-wrapper">
         <Sidebar />
         <div className="container mt-5">
-          <h2>Employee / Reviewer List</h2>
+          <h2>Employee</h2>
           <a href='/employeescreate'>
             <button className='btn btn-md btn-primary text-white' style={{backgroundColor: "#167340"}}>Create New Employee</button>
           </a>
@@ -199,6 +220,9 @@ const EmployeeIndex = () => {
                     </button>
                     <button type="submit" className="btn btn-primary" style={{backgroundColor: "#167340"}}>
                       Save Changes
+                    </button>
+                    <button type="button" className="btn btn-warning ms-2" onClick={handleConvertToReviewer}>
+                      Convert Him To Employee And Reviewer
                     </button>
                   </div>
                 </form>

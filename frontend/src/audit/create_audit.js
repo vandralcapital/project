@@ -239,13 +239,22 @@ const CreateAuditForm = () => {
 
             <div className="mb-3">
               <label>Select HOD/Reviewer:</label>
-              <select value={userId} onChange={(e) => setUserId(e.target.value)} className='form-control'>
+              <select value={userId} onChange={(e) => setUserId(e.target.value)} className='form-control' required>
                 <option value="" selected disabled>Select</option>
-                {users.map((user) => (
-                  <option key={user._id} value={user._id}>
-                    {user.name}
-                  </option>
-                ))}
+                {/* Only show the reviewer whose _id matches the selected employee's user_id */}
+                {(() => {
+                  if (!empId) return null;
+                  const selectedEmployee = employees.find(emp => emp._id === empId);
+                  if (!selectedEmployee) return null;
+                  // Find the reviewer (user) whose _id matches selectedEmployee.user_id
+                  return users
+                    .filter(user => user._id === (selectedEmployee.user_id && selectedEmployee.user_id._id ? selectedEmployee.user_id._id : selectedEmployee.user_id))
+                    .map(user => (
+                      <option key={user._id} value={user._id}>
+                        {user.name}
+                      </option>
+                    ));
+                })()}
               </select>
             </div>
 

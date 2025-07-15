@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../auth/AuthContext';
 
 function UploadExcel() {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -14,6 +15,7 @@ function UploadExcel() {
     const [selectedApplication, setSelectedApplication] = useState('');
     const [selectedApplicationName, setSelectedApplicationName] = useState('');
     const [selectedApplicationRights, setSelectedApplicationRights] = useState([]);
+    const { user } = useAuth();
 
     useEffect(() => {
         const fetchApplications = async () => {
@@ -160,11 +162,16 @@ function UploadExcel() {
             const excelHeaders = Object.keys(previewData[0] || {}).filter(header => !standardColumns.includes(header));
 
             // Process the data
-            const response = await axios.post(`${process.env.REACT_APP_API_URL}/excelUpload`, previewData, {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await axios.post(
+                `${process.env.REACT_APP_API_URL}/excelUpload`,
+                previewData,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                }
+            );
 
             if (response.data.errors && response.data.errors.length > 0) {
                 setMessage(`Upload completed with ${response.data.errors.length} errors.`);
@@ -199,7 +206,10 @@ function UploadExcel() {
                                 required
                             >
                                 <option value="">--Select Application--</option>
-                                {applications.map((app) => (
+                                {(user && user.role === 'app_admin'
+                                    ? applications.filter(app => app.adminEmail === user.email)
+                                    : applications
+                                ).map((app) => (
                                     <option key={app._id} value={app._id}>
                                         {app.appName}
                                     </option>
@@ -228,11 +238,12 @@ function UploadExcel() {
                             </div>
                         )}
 
-                        {message && <p className="alert alert-info">{message}</p>}
+                        {message && !report.length && <p className="alert alert-info">{message}</p>}
 
-                        {previewData.length > 0 && (
+                        {/* Only show preview and upload button if there are no errors */}
+                        {previewData.length > 0 && !report.length && (
                             <div className="table-responsive mt-4">
-                                                                <button 
+                                <button 
                                     onClick={handleUploadClick} 
                                     className="btn btn-primary mt-3" style={{backgroundColor: "#167340"}} 
                                     disabled={isLoading || previewData.length === 0}
@@ -260,71 +271,36 @@ function UploadExcel() {
                                         ))}
                                     </tbody>
                                 </table>
-
                             </div>
                         )}
 
-                        {report && (
+                        {/* Only show the error report if there are errors */}
+                        {report && report.length > 0 && (
                         <div className="container mt-4">
                         <h3>Upload Report:</h3>
-                        {report.succesData?.length > 0 && (
-                            <div>
-                                <h4>Successfuly Created Following Entries:</h4>
-                                <div className="table-responsive">
-                                    <table className="table table-bordered table-striped">
-                                        <thead className="table-dark">
-                                            <tr>
-                                                <th>Employee Name</th>
-                                                <th>Employee Email</th>
-                                                <th>Application</th>
-                                                <th>Initial Rights</th>
-                                                <th>Audit Date</th>
-                                                <th>HOD</th>
+                        <div className="mt-4">
+                            <h4>Issues Reported While Importing:</h4>
+                            <div className="table-responsive">
+                                <table className="table table-bordered table-striped">
+                                    <thead className="table-dark">
+                                        <tr>
+                                            <th>Row Index</th>
+                                            <th>Issue Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {report.map((item, index) => (
+                                            <tr key={index}>
+                                                <td>{item.row || '-'}</td>
+                                                <td>{item.error || '-'}</td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {report.succesData.map((item) => (
-                                                <tr key={item._id}>
-                                                    <td>{item.emp_id?.name || "-"}</td>
-                                                    <td>{item.emp_id?.email || "-"}</td>
-                                                    <td>{item.application_id?.appName || "-"}</td>
-                                                    <td>{item.initialRights || "-"}</td>
-                                                    <td>{item.audit_date ? new Date(item.audit_date).toLocaleDateString() : '-'}</td>
-                                                    <td>{item.hod || "-"}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
+                        </div>
+                        </div>
                         )}
-                        
-                        {report.errors?.length > 0 && (
-                            <div className="mt-4">
-                                <h4>Issues Reported While Importing:</h4>
-                                <div className="table-responsive">
-                                    <table className="table table-bordered table-striped">
-                                        <thead className="table-dark">
-                                            <tr>
-                                                <th>Row Index</th>
-                                                <th>Issue Description</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {report.errors.map((item, index) => (
-                                                <tr key={index}>
-                                                    <td>{item.row || "-"}</td>
-                                                    <td>{item.Error || "-"}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    
-                    )}
 
                     </div>
                 </div>

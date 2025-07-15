@@ -8,9 +8,10 @@ const EmployeeForm = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [users, setUsers] = useState([]);  // To hold frequency data
-  const [selectedUser, setSelectedUser] = useState('');  // Store selected frequency ID
-
+  const [users, setUsers] = useState([]);  // To hold HOD data
+  const [selectedUser, setSelectedUser] = useState('');  // Store selected HOD ID
+  const [applications, setApplications] = useState([]); // To hold application data
+  const [selectedApplication, setSelectedApplication] = useState(''); // Store selected application name
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -20,20 +21,27 @@ const EmployeeForm = () => {
         if (!response.ok) {
           throw new Error('Failed to fetch register');
         }
-        // console.log(response);  // Log response object
         return response.json();
       })
       .then((data) => {
-        console.log('Fetched userhod:', data);
         setUsers(data);
       })
       .catch((error) => {
         console.error('Error userhod user:', error);
       });
+
+    // Fetch applications
+    axios.get(`${process.env.REACT_APP_API_URL}/creating`)
+      .then((result) => setApplications(result.data))
+      .catch((err) => console.error('Failed to fetch applications', err));
   }, []);
 
   const handleUserChange = (e) => {
-    setSelectedUser(e.target.value); // Set selected frequency ID
+    setSelectedUser(e.target.value); // Set selected HOD ID
+  };
+
+  const handleApplicationChange = (e) => {
+    setSelectedApplication(e.target.value); // Set selected application name
   };
 
   // Handle form submission to add a new employee
@@ -41,19 +49,27 @@ const EmployeeForm = () => {
     e.preventDefault();
     try {
       const newEmployee = {
-        name, email,
-        user_id: selectedUser // Add the selected user (HOD ID) here
-
+        name,
+        email,
+        user_id: selectedUser, // Add the selected user (HOD ID) here
+        applicationName: selectedApplication // Add the selected application name here
       };
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/employee`, newEmployee);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/employee`,
+        newEmployee,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
       Swal.fire({
         title: "Employee Created Successfully",
-        // text: "Do you want to proceed with adding this employee?",
         icon: "success",
       }).then((result) => {
         window.location.href = "/employees";
       });
-
       setError('');
     } catch (err) {
       setError('Failed to create  Please try again.');
@@ -100,7 +116,7 @@ const EmployeeForm = () => {
 
             <div className="mb-3">
               <label>Select HOD:</label>
-              <select value={selectedUser} onChange={handleUserChange} className='form-control'>
+              <select value={selectedUser} onChange={handleUserChange} className='form-control' required>
                 <option value="">-- Select HOD --</option>
                 {users.map(user => (
                   <option key={user._id} value={user._id}>
@@ -110,6 +126,17 @@ const EmployeeForm = () => {
               </select>
             </div>
 
+            <div className="mb-3">
+              <label>Select Application:</label>
+              <select value={selectedApplication} onChange={handleApplicationChange} className='form-control' required>
+                <option value="">-- Select Application --</option>
+                {applications.map(app => (
+                  <option key={app._id} value={app.appName}>
+                    {app.appName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <button type="submit" className="btn btn-primary" style={{backgroundColor: "#167340"}}>Add Employee</button>
           </form>

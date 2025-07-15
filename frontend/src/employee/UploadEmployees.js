@@ -7,6 +7,7 @@ const UploadEmployees = () => {
     const [file, setFile] = useState(null);
     const [message, setMessage] = useState("");
     const [previewData, setPreviewData] = useState([]);
+    const [errors, setErrors] = useState([]); // Add state for errors
 
     // Handle file selection
     const handleFileChange = (e) => {
@@ -20,8 +21,12 @@ const UploadEmployees = () => {
         reader.onload = (event) => {
             const binaryStr = event.target.result;
             const wb = XLSX.read(binaryStr, { type: "binary" });
-            // const ws = wb.Sheets[wb.SheetNames[0]]; // Reading Sheet 1
-            const ws = wb.Sheets["Sheet2"]; // Reading Sheet 2
+            // Read the first sheet by default
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            if (!ws) {
+                setPreviewData([]);
+                return;
+            }
             const data = XLSX.utils.sheet_to_json(ws);
             setPreviewData(data);  // Store preview data
         };
@@ -44,9 +49,16 @@ const UploadEmployees = () => {
             });
             setMessage(response.data.message);
             setPreviewData([]); // Clear preview after upload
+            // Check for errors in response
+            if (response.data.errors && response.data.errors.length > 0) {
+                setErrors(response.data.errors);
+            } else {
+                setErrors([]);
+            }
         } catch (error) {
             console.error("Upload Error:", error);
             setMessage("Error uploading file");
+            setErrors([error.response?.data?.message || "Unknown error"]);
         }
     };
 
@@ -88,38 +100,39 @@ const UploadEmployees = () => {
                         <button onClick={handleUpload} className="btn btn-primary mb-3" style={{backgroundColor: "#167340"}}>Upload</button>
                         {message && <p className="alert alert-info">{message}</p>}
 
+                        {/* Show errors if any */}
+                        {errors.length > 0 && (
+                            <div className="alert alert-danger">
+                                <h5>Errors:</h5>
+                                <ul>
+                                    {errors.map((err, idx) => (
+                                        <li key={idx}>{typeof err === 'string' ? err : JSON.stringify(err)}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         {previewData.length > 0 && (
                             <div className="table-responsive">
-                                <h4>Preview Data:</h4>
+                                <h4>Preview Data ({previewData.length} rows):</h4>
                                 <table className="table table-bordered">
                                     <thead className="table-dark">
                                         <tr>
-                                            <th>Emp Name</th>
-                                            <th>Email ID</th>
-                                            <th>HOD</th>
+                                            {/* Dynamically generate table headers from previewData keys */}
+                                            {Object.keys(previewData[0] || {}).map(key => (
+                                                <th key={key}>{key}</th>
+                                            ))}
                                         </tr>
                                     </thead>
-                                    {/* <tbody>
-                                        {previewData.map((item, index) => (
-                                            <tr key={index}>
-                                                <td>{item.Emp_Name || "N/A"}</td>
-                                                <td>{item.Email_ID || "N/A"}</td>
-                                                <td>{item.HOD || "N/A"}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody> */}
-
-
                                     <tbody>
                                         {previewData.map((item, index) => (
                                             <tr key={index}>
-                                                <td>{item["Emp Name"] || "-"}</td>
-                                                <td>{item["Email ID"] || "-"}</td>
-                                                <td>{item["HOD"] || "-"}</td>
+                                                {Object.keys(previewData[0] || {}).map(key => (
+                                                    <td key={key}>{item[key] || '-'}</td>
+                                                ))}
                                             </tr>
                                         ))}
                                     </tbody>
-
                                 </table>
                             </div>
                         )}

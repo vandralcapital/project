@@ -11,7 +11,7 @@ body {
   .app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
   }
   
   .navbar {
@@ -26,34 +26,54 @@ body {
   .content-wrapper {
     display: flex;
     flex: 1;
+    min-height: 0;
   }
   
   .sidebar {
+    background: #f8fafc;
+    min-width: 200px;
     width: 200px;
-    background-color: #2EA44B;
-    padding: 20px;
+    padding: 32px 0 32px 0;
+    border-radius: 0 16px 16px 0;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.04);
+    height: calc(100vh - 64px); /* Adjust if your navbar is a different height */
   }
   
   .sidebar ul {
     list-style: none;
     padding: 0;
+    margin: 0;
   }
   
-  .sidebar ul li {
-    margin: 15px 0;
+  .sidebar li {
+    margin: 18px 0;
   }
   
-  .sidebar ul li a {
+  .sidebar a, .sidebar-btn {
+    display: flex;
+    align-items: center;
+    color: #167340;
     text-decoration: none;
-    color: #FFF;
+    font-size: 1.08rem;
+    font-weight: 500;
+    padding: 10px 24px;
+    border-radius: 8px;
+    transition: background 0.18s, color 0.18s;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
   }
   
-  .sidebar ul li a:hover {
-    color: #FFF;
-    background-color: rgba(48, 52, 55, 0.75);
-    border-radius: 12px;
-    padding: 10px 20px;
-    transition: .2s ease-in-out;
+  .sidebar a:hover, .sidebar-btn:hover {
+    background: #e6f4ea;
+    color: #125c32;
+  }
+  
+  .sidebar .active {
+    background: #d0f5e8;
+    color: #125c32;
+    font-weight: 700;
   }
   
   .main-content {
@@ -206,4 +226,62 @@ body {
 .change-password-button:disabled {
   background-color: #a5b4fc;
   cursor: not-allowed;
+}
+
+.green-btn {
+  background: #167340;
+  color: white;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 16px;
+  transition: background 0.2s;
+}
+.green-btn:hover {
+  background: #125c32;
+}
+
+.logout-btn {
+  background: #fff;
+  color: #388e3c;
+  border: 2px solid #388e3c;
+  border-radius: 6px;
+  padding: 8px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(56, 142, 60, 0.08);
+}
+
+.logout-btn:hover {
+  background: #388e3c;
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 16px rgba(56, 142, 60, 0.15);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: absolute;
+    min-width: 60px;
+    width: 60px;
+    padding: 16px 0;
+    border-radius: 0 12px 12px 0;
+    overflow-x: hidden;
+  }
+  .sidebar ul {
+    padding: 0;
+  }
+  .sidebar a, .sidebar-btn {
+    padding: 10px 10px;
+    font-size: 1.2rem;
+    justify-content: center;
+  }
+  .sidebar li {
+    margin: 12px 0;
+  }
 }

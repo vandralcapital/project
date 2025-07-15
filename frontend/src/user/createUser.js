@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import axios from 'axios';
 import Swal from "sweetalert2";
+import { useNavigate } from 'react-router-dom';
 
 const AddUser = () => {
   const [name, setName] = useState('');
@@ -13,6 +14,7 @@ const AddUser = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,12 +35,10 @@ const AddUser = () => {
       });
       Swal.fire({
         title: "HOD Created Successfully",
-        // text: "Do you want to proceed with adding this HOD?",
         icon: "success",
       }).then((result) => {
         window.location.href = "/hods";
       });
-
       setError('');
     } catch (err) {
       setError('Failed to create  Please try again.');

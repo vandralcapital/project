@@ -3,6 +3,7 @@ import Dashboard from "./Dashboard";
 import Reviewer from "../reviewer_dashboard/Dashboard";
 import React from 'react';
 import { useNavigate } from "react-router-dom";
+import ApplicationAdminDashboard from "./ApplicationAdminDashboard";
 
 const RoleBasedDashboard = () => {
   const { user, logout } = useAuth();
@@ -13,6 +14,11 @@ const RoleBasedDashboard = () => {
   // Show dashboard for admin or hod
   if (user.role === "admin" || user.role === "hod") {
     return <Reviewer />;
+  }
+
+  // Show dashboard for app_admin
+  if (user.role === "app_admin") {
+    return <ApplicationAdminDashboard />;
   }
 
   return (

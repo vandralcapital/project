@@ -10,9 +10,8 @@ const Logout = () => {
 
   useEffect(() => {
     logout();
-    navigate("/"); // Redirect to login page after logout
-    // window.location.reload();
-
+    navigate("/"); // Redirect to main login page after logout
+    window.location.reload(); // Force reload to reset state
   }, [logout, navigate]);
 
   return <p>Logging out...</p>;

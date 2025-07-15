@@ -44,6 +44,7 @@ import ChangePassword from './reviewer_dashboard/changepass';
 import UploadEmployees from './employee/UploadEmployees';
 import UploadHods from './hod/UploadHod';
 import CreateAdmin from './user/CreateAdmin';
+import ExportCompletedReviews from './pages/ExportCompletedReviews';
 
 function App() {
   
@@ -141,6 +142,11 @@ function App() {
           <Route path='/create_admin' element={
             <ProtectedRoute>
               <CreateAdmin />
+            </ProtectedRoute>
+          }></Route>
+          <Route path='/exportCompletedReviews' element={
+            <ProtectedRoute>
+              <ExportCompletedReviews />
             </ProtectedRoute>
           }></Route>
 

@@ -208,6 +208,7 @@ const FrequencyIndex = () => {
                             <option value="30">30</option>
                             <option value="90">90</option>
                             <option value="180">180</option>
+                            <option value="365">365</option>
                           </select>
                       </div>
                       <div className="mb-3">
