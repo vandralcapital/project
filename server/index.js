@@ -41,29 +41,13 @@ const simulateAuthMiddleware = (req, res, next) => {
     next();
 };
 
-// Comment out the old email configuration
-/*
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: 'divyanshsinghiscool@gmail.com',
-    pass: 'edrx rwbw gkzw raky'
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 5 * 60 * 1000,
-  greetingTimeout: 5 * 60 * 1000,
-  socketTimeout: 5 * 60 * 1000
-});
-*/
-
 const app = express()
-app.use(cors({ 
-  origin: 'https://10.91.41.16',  // Allows all origins // Allows all origins // https://erapp.religare.in
-  credentials: true }));
+app.use(cors({
+  origin: function (origin, callback) {
+    callback(null, origin); // Dynamically allow the requesting origin
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 
 // MongoDB Connection
