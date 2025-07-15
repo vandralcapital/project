@@ -8,17 +8,21 @@ const Navbar = () => {
       return <h2>Loading...</h2>;
     }
   return (
-    <div className="navbar">
-      <h1>Entitlement Review</h1>
-      <div className="user-info">
-        <span>Welcome, {user.name}!</span>
-      </div>
-      <div className="user-info">
+    <div className="navbar enhanced-navbar">
+      <h1 className="navbar-title">Entitlement Review</h1>
+      <div className="navbar-user-section">
+        <div className="navbar-avatar">
+          {user.name && (
+            <span>{user.name.split(' ').map(n => n[0]).join('').toUpperCase()}</span>
+          )}
+        </div>
+        <div className="navbar-user-info">
+          <span className="navbar-welcome">Welcome, {user.name}!</span>
+        </div>
         <a href='/logout' style={{textDecoration: "none"}}>
-          <button className="logout-btn">Log out</button>
+          <button className="logout-btn enhanced-logout-btn">Log out</button>
         </a>
       </div>
-
     </div>
   );
 };
