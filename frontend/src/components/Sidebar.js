@@ -52,20 +52,6 @@ const Sidebar = () => {
       <ul>
         {user.role === "admin" && (
           <li>
-            <Link to="/app" className={isActive('/app') ? 'active' : ''}>
-              <FaThList style={{ marginRight: 10 }} /> Applications
-            </Link>
-          </li>
-        )}
-        {user.role === "admin" && (
-          <li>
-            <Link to="/employees" className={isActive('/employees') ? 'active' : ''}>
-              <FaUsers style={{ marginRight: 10 }} /> Employees
-            </Link>
-          </li>
-        )}
-        {user.role === "admin" && (
-          <li>
             <Link to="/frequency" className={isActive('/frequency') ? 'active' : ''}>
               <FaCalendarAlt style={{ marginRight: 10 }} /> Frequency
             </Link>
@@ -73,8 +59,22 @@ const Sidebar = () => {
         )}
         {user.role === "admin" && (
           <li>
+            <Link to="/app" className={isActive('/app') ? 'active' : ''}>
+              <FaThList style={{ marginRight: 10 }} /> Applications
+            </Link>
+          </li>
+        )}
+        {user.role === "admin" && (
+          <li>
             <Link to="/hods" className={isActive('/hods') ? 'active' : ''}>
               <FaUserShield style={{ marginRight: 10 }} /> Reviewers
+            </Link>
+          </li>
+        )}
+        {user.role === "admin" && (
+          <li>
+            <Link to="/employees" className={isActive('/employees') ? 'active' : ''}>
+              <FaUsers style={{ marginRight: 10 }} /> Employees
             </Link>
           </li>
         )}
@@ -109,6 +109,7 @@ const Sidebar = () => {
             </Link>
           </li>
         )}
+        {/*
         {user.role === "admin" && (
           <li>
             <Link to="/hods" className={isActive('/hods') ? 'active' : ''}>
@@ -116,6 +117,8 @@ const Sidebar = () => {
             </Link>
           </li>
         )}
+        */}
+        {/* Change Password For Admin is commented out because it is currently broken */}
         {user.role === "hod" && (
           <li>
             <Link to="/change-password" className={isActive('/change-password') ? 'active' : ''}>
