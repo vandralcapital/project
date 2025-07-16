@@ -46,108 +46,130 @@ import UploadHods from './hod/UploadHod';
 import CreateAdmin from './user/CreateAdmin';
 import ExportCompletedReviews from './pages/ExportCompletedReviews';
 import MyEmployees from './pages/MyEmployees';
+import Toast from './components/Toast';
+import axios from 'axios';
+import SessionManager from './components/SessionManager';
+import ActiveSessions from './pages/ActiveSessions';
 
 function App() {
-  
-  const { isAuthenticated, user } = useAuth();
-
   return (
     <AuthProvider>
-       <Router>
+      <SessionManager />
+      <Router>
         <Routes>
-        <Route path="/change-password" element={<ChangePassword />} />
+          <Route path="/change-password" element={
+            <ProtectedRoute allowedRoles={["hod"]}>
+              <ChangePassword />
+            </ProtectedRoute>
+          } />
           <Route path='/register' element={<Signup />}></Route>
-          <Route path='/' element={isAuthenticated ? <Navigate to="/dashboard"/> : <Login />}></Route>
-          
+          <Route path='/' element={<Login />}></Route>
+
           <Route path='/dashboard' element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin", "app_admin", "hod"]}>
               <RoleBasedDashboard/>
             </ProtectedRoute>
           }></Route>
 
           <Route path='/logout' element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin", "app_admin", "hod"]}>
               <Logout />
             </ProtectedRoute>
           }></Route>
 
-          <Route path='/create_frequency' element={<Frequency />}></Route>
-          <Route path='/frequency' element={<FrequencyIndex />}></Route>
-
+          <Route path='/create_frequency' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Frequency />
+            </ProtectedRoute>
+          }></Route>
+          <Route path='/frequency' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <FrequencyIndex />
+            </ProtectedRoute>
+          }></Route>
 
           <Route path='/app' element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <Application />
             </ProtectedRoute>}></Route>
           <Route path='/applicationcreate' element={
-             <ProtectedRoute>
-            <CreateApp />
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CreateApp />
             </ProtectedRoute>}></Route>
           <Route path='/update' element={<UpdateUser />}></Route>
         
           <Route path='/employeescreate' element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <EmployeeCreate />
             </ProtectedRoute>
           }></Route>
 
           <Route path='/employees' element={
-              <ProtectedRoute>
-                <Employee />
-              </ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Employee />
+            </ProtectedRoute>
            }></Route>
 
             <Route path='/hods' element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin"]}>
                 <HODs/>
               </ProtectedRoute>
            }></Route>
 
           {/* <Route path='/reviewer' element={<Reviewer />}></Route> */}
           <Route path='/hodcreate' element={
-             <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <User />
-             </ProtectedRoute>
-            }></Route>
+            </ProtectedRoute>
+          }></Route>
 
             <Route path='/pastReviews' element={
-             <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <AuditList />
-             </ProtectedRoute>
+            </ProtectedRoute>
             }></Route>
 
             <Route path='/myEmployees' element={
-             <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <MyEmployees />
-             </ProtectedRoute>
+            </ProtectedRoute>
             }></Route>
 
             <Route path='/uploadExcel' element={
-             <ProtectedRoute>
-                <UploadExcel/>
-             </ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin", "app_admin"]}>
+              <UploadExcel/>
+            </ProtectedRoute>
             }></Route>
 <Route path='/uploademployee' element={
-             <ProtectedRoute>
-                <UploadEmployees/>
-             </ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin", "app_admin"]}>
+              <UploadEmployees/>
+            </ProtectedRoute>
             }></Route>
 
 
 <Route path='/uploadhod' element={
-             <ProtectedRoute>
-                <UploadHods/>
-             </ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UploadHods/>
+            </ProtectedRoute>
             }></Route>
-          <Route path='/create_audit' element={<Audit />}></Route>
+          <Route path='/create_audit' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Audit />
+            </ProtectedRoute>
+          }></Route>
           <Route path='/create_admin' element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <CreateAdmin />
             </ProtectedRoute>
           }></Route>
           <Route path='/exportCompletedReviews' element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin", "app_admin"]}>
               <ExportCompletedReviews />
+            </ProtectedRoute>
+          }></Route>
+          <Route path='/active-sessions' element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ActiveSessions />
             </ProtectedRoute>
           }></Route>
 

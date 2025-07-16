@@ -4,6 +4,7 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../auth/AuthContext';
+import Toast from '../components/Toast';
 
 function UploadExcel() {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -16,6 +17,7 @@ function UploadExcel() {
     const [selectedApplicationName, setSelectedApplicationName] = useState('');
     const [selectedApplicationRights, setSelectedApplicationRights] = useState([]);
     const { user } = useAuth();
+    const [toast, setToast] = useState(null); // { message, type }
 
     useEffect(() => {
         const fetchApplications = async () => {
@@ -30,6 +32,12 @@ function UploadExcel() {
 
         fetchApplications();
     }, []);
+
+    useEffect(() => {
+        if (message && !report.length) {
+            setToast({ message, type: message.toLowerCase().includes('error') || message.toLowerCase().includes('forbidden') ? 'error' : 'info' });
+        }
+    }, [message, report.length]);
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -193,6 +201,7 @@ function UploadExcel() {
             <Navbar />
             <div className="content-wrapper">
                 <Sidebar />
+                {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
                 <div className="dashboard-container">
                     <div className="container mt-5">
                         <h2>Upload Excel For Reviews</h2>
@@ -238,8 +247,7 @@ function UploadExcel() {
                             </div>
                         )}
 
-                        {message && !report.length && <p className="alert alert-info">{message}</p>}
-
+                        {/* Toast replaces the blue box for general/global messages */}
                         {/* Only show preview and upload button if there are no errors */}
                         {previewData.length > 0 && !report.length && (
                             <div className="table-responsive mt-4">

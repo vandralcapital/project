@@ -18,6 +18,7 @@ const { sendEmail } = require('./services/emailService');
 const setupChangeLogging = require('./middleware/setupChangeLogging');
 const { FrequencyLog, EmployeeLog, ApplicationLog } = require('./models/logSchemas');
 const { authenticateLDAP, verifyLDAPCredentials } = require('./services/ldapService');
+const Session = require('./models/Session');
 
 // require("dotenv").config();
 
@@ -458,6 +459,7 @@ app.post("/login", async (req, res) => {
         // First check if user exists in MongoDB
         let user = await UserModel.findOne({ email: email });
         
+        let token;
         if (user) {
             // If user exists, try LDAP first if they are an LDAP user
             if (user.authType === 'ldap') {
@@ -467,7 +469,7 @@ app.post("/login", async (req, res) => {
                     
                     if (isLDAPAuthenticated) {
                         console.log('LDAP authentication successful');
-                        const token = jwt.sign(
+                        token = jwt.sign(
                             { 
                                 userId: user._id,
                                 email: user.email,
@@ -476,8 +478,13 @@ app.post("/login", async (req, res) => {
                                 applicationName: user.applicationName
                             },
                             config.jwt.secret,
-                            { expiresIn: config.jwt.expiresIn }
+                            { expiresIn: '10m' }
                         );
+                        // Invalidate previous sessions
+                        await Session.updateMany({ userId: user._id, isActive: true }, { isActive: false });
+                        // Create new session
+                        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+                        await Session.create({ userId: user._id, token, expiresAt, isActive: true });
                         return res.json({
                             success: true,
                             token,
@@ -502,7 +509,7 @@ app.post("/login", async (req, res) => {
                 // For non-LDAP users, check MongoDB password
                 if (user.password === password) {  // In production, use proper password hashing
                     console.log('MongoDB authentication successful');
-                    const token = jwt.sign(
+                    token = jwt.sign(
                         { 
                             userId: user._id,
                             email: user.email,
@@ -511,8 +518,13 @@ app.post("/login", async (req, res) => {
                             applicationName: user.applicationName
                         },
                         config.jwt.secret,
-                        { expiresIn: config.jwt.expiresIn }
+                        { expiresIn: '10m' }
                     );
+                    // Invalidate previous sessions
+                    await Session.updateMany({ userId: user._id, isActive: true }, { isActive: false });
+                    // Create new session
+                    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+                    await Session.create({ userId: user._id, token, expiresAt, isActive: true });
                     return res.json({
                         success: true,
                         token,
@@ -552,7 +564,7 @@ app.post("/login", async (req, res) => {
                     await user.save();
                     console.log('New user created in MongoDB');
 
-                    const token = jwt.sign(
+                    token = jwt.sign(
                         { 
                             userId: user._id,
                             email: user.email,
@@ -561,9 +573,13 @@ app.post("/login", async (req, res) => {
                             applicationName: user.applicationName
                         },
                         config.jwt.secret,
-                        { expiresIn: config.jwt.expiresIn }
+                        { expiresIn: '10m' }
                     );
-
+                    // Invalidate previous sessions
+                    await Session.updateMany({ userId: user._id, isActive: true }, { isActive: false });
+                    // Create new session
+                    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+                    await Session.create({ userId: user._id, token, expiresAt, isActive: true });
                     return res.json({
                         success: true,
                         token,
@@ -982,7 +998,8 @@ app.get("/pendingAudits", async (req, res) => {
     })  
     .populate("frequency_id", "name") 
     .populate("application_id", "appName app_rights") 
-    .populate("emp_id", "name") 
+    .populate("emp_id", "name")
+    .populate("user_id", "name email"); // <-- Add this line
  
     res.json(audits);
     return;
@@ -1068,9 +1085,9 @@ app.post('/excelUpload', checkAuth, async (req, res) => {
   let processedEmployees = [];
   let reviewerEmail = null;
 
-  // Restrict to app_admins only
-  if (!req.user || req.user.role !== 'app_admin') {
-    return res.status(403).json({ message: 'Forbidden: Only Application Admins can upload reviews.' });
+  // Restrict to app_admins or admin only
+  if (!req.user || (req.user.role !== 'app_admin' && req.user.role !== 'admin')) {
+    return res.status(403).json({ message: 'Forbidden: Only Application Admins or Admin can upload reviews.' });
   }
 
   try {
@@ -1095,8 +1112,8 @@ app.post('/excelUpload', checkAuth, async (req, res) => {
           continue;
         }
 
-        // Restrict to app_admin's own application
-        if (app.adminEmail !== req.user.email) {
+        // Restrict to app_admin's own application, but allow admin to upload for any app
+        if (req.user.role !== 'admin' && app.adminEmail !== req.user.email) {
           errorArr.push({ row: i + 2, error: `You are not the admin for application: ${applicationName}` });
           continue;
         }
@@ -1737,5 +1754,54 @@ app.get('/pendingAuditsForAdmin', checkAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching pending audits for admin:', error);
     res.status(500).json({ message: 'Error fetching pending audits for admin', error: error.message });
+  }
+});
+
+app.get('/session-time-left', checkAuth, async (req, res) => {
+  try {
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+    const session = await Session.findOne({ userId: req.user._id, token, isActive: true });
+    if (!session) return res.status(401).json({ error: 'Session not found' });
+    const now = new Date();
+    const expiresAt = new Date(session.expiresAt);
+    const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
+    res.json({ secondsLeft });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get session time left' });
+  }
+});
+
+// List all currently active sessions (unique emails and roles)
+app.get('/api/active-sessions', async (req, res) => {
+  try {
+    const now = new Date();
+    // Find all active sessions that have not expired
+    const sessions = await Session.find({ isActive: true, expiresAt: { $gt: now } }).populate('userId', 'email role');
+    // Map to unique users by email
+    const userMap = new Map();
+    sessions.forEach(session => {
+      if (session.userId && session.userId.email) {
+        userMap.set(session.userId.email, session.userId.role);
+      }
+    });
+    const result = Array.from(userMap.entries()).map(([email, role]) => ({ email, role }));
+    res.json({ sessions: result });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch active sessions', details: err.message });
+  }
+});
+
+// Terminate session for a user by email
+app.post('/api/terminate-session', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const user = await UserModel.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const result = await Session.updateMany({ userId: user._id, isActive: true }, { isActive: false });
+    res.json({ success: true, modifiedCount: result.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to terminate session', details: err.message });
   }
 });

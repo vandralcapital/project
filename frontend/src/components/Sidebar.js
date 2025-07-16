@@ -86,6 +86,13 @@ const Sidebar = () => {
         )}
         {user.role === "admin" && (
           <li>
+            <Link to="/active-sessions" className={isActive('/active-sessions') ? 'active' : ''}>
+              <FaUsers style={{ marginRight: 10 }} /> Active Sessions
+            </Link>
+          </li>
+        )}
+        {user.role === "admin" && (
+          <li>
             <Link to="/create_audit" className={isActive('/create_audit') ? 'active' : ''}>
               <FaClipboardCheck style={{ marginRight: 10 }} /> Create Review
             </Link>

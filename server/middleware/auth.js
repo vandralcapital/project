@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/User');
+const Session = require('../models/Session');
 const secretKey = 'your-secret-key';
 
 module.exports = async (req, res, next) => {
@@ -9,6 +10,11 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     const decodedToken = jwt.verify(token, secretKey);
+    // Check session validity
+    const session = await Session.findOne({ userId: decodedToken.userId, token, isActive: true });
+    if (!session || session.expiresAt < new Date()) {
+      return res.status(401).json({ error: 'Session expired or invalid. Please log in again.' });
+    }
     // Try to get name from token, otherwise fetch from DB
     let user = {
       _id: decodedToken.userId,

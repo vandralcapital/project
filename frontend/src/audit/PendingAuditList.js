@@ -141,6 +141,40 @@ const PendingAuditList = () => {
     });
   };
 
+  const notifyReviewer = async (audit) => {
+    const reviewerEmail = audit.user_id?.email;
+    const employeeName = audit.emp_id?.name;
+    if (!reviewerEmail) {
+      Swal.fire({
+        title: "Reviewer email not found!",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false
+      });
+      return;
+    }
+    try {
+      await axios.post('/sendReviewNotification', {
+        reviewerEmail,
+        employeeNames: [employeeName],
+        message: `Review is pending for employee: ${employeeName}`
+      });
+      Swal.fire({
+        title: "Notification sent!",
+        icon: "success",
+        timer: 1200,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      Swal.fire({
+        title: "Failed to send notification!",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+  };
+
   return (
     <div className="container mt-5">
       <h2>Pending Reviews</h2>
@@ -246,6 +280,13 @@ const PendingAuditList = () => {
                     ) : (
                       'Submit'
                     )}
+                  </button>
+                  <button
+                    className="btn btn-info mt-2"
+                    style={{ color: 'white' }}
+                    onClick={() => notifyReviewer(audit)}
+                  >
+                    Notify Email
                   </button>
                   {submitError[audit._id] && (
                     <div className="text-danger mt-1">{submitError[audit._id]}</div>

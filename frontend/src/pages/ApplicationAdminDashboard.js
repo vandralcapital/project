@@ -3,7 +3,30 @@ import { useAuth } from '../auth/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+// Simple toast implementation
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 20,
+      right: 20,
+      zIndex: 9999,
+      background: type === 'error' ? '#d9534f' : '#5cb85c',
+      color: 'white',
+      padding: '16px 32px',
+      borderRadius: 8,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      fontWeight: 600,
+      fontSize: 16
+    }}>
+      {message}
+    </div>
+  );
+};
 
 const ApplicationAdminDashboard = () => {
   const { user } = useAuth();
@@ -12,6 +35,7 @@ const ApplicationAdminDashboard = () => {
   const [selectedReviewers, setSelectedReviewers] = useState({}); // { reviewerEmail: true }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState(null); // { message, type }
 
   // Fetch applications for this admin
   useEffect(() => {
@@ -73,7 +97,7 @@ const ApplicationAdminDashboard = () => {
   const handleNotify = async () => {
     const reviewersToNotify = Object.keys(selectedReviewers).filter(email => selectedReviewers[email]);
     if (reviewersToNotify.length === 0) {
-      Swal.fire('Select at least one reviewer to notify.', '', 'warning');
+      setToast({ message: 'Select at least one reviewer to notify.', type: 'error' });
       return;
     }
     setLoading(true);
@@ -90,9 +114,9 @@ const ApplicationAdminDashboard = () => {
           });
         })
       );
-      Swal.fire('Notification(s) sent!', '', 'success');
+      setToast({ message: 'Notification(s) sent!', type: 'success' });
     } catch (e) {
-      Swal.fire('Failed to send notification(s).', '', 'error');
+      setToast({ message: 'Failed to send notification(s).', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -103,6 +127,7 @@ const ApplicationAdminDashboard = () => {
       <Navbar />
       <div className="content-wrapper">
         <Sidebar />
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <div className="dashboard-container">
           <h2>Pending Reviews (Your Applications)</h2>
           {loading ? (
