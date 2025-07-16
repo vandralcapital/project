@@ -19,6 +19,11 @@ const Sidebar = () => {
       <div className="sidebar">
         <ul>
           <li>
+            <button className="sidebar-btn" onClick={() => navigate('/dashboard')}>
+              <FaThList style={{ marginRight: 10 }} /> Pending Reviews Notification
+            </button>
+          </li>
+          <li>
             <button className="sidebar-btn" onClick={() => navigate('/uploadExcel')}>
               <FaFileUpload style={{ marginRight: 10 }} /> Upload Review Excel
             </button>
@@ -34,11 +39,11 @@ const Sidebar = () => {
               <FaFileUpload style={{ marginRight: 10 }} /> Upload Employee
             </button>
           </li>
-          <li>
+          {/* <li>
             <button className="sidebar-btn" onClick={() => navigate('/myEmployees')}>
               <FaUsers style={{ marginRight: 10 }} /> My Employees
             </button>
-          </li>
+          </li> */}
         </ul>
       </div>
     );

@@ -2,33 +2,156 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const ApplicationAdminDashboard = () => {
   const { user } = useAuth();
-  const [appName, setAppName] = useState('');
+  const [pendingReviews, setPendingReviews] = useState([]);
+  const [appIds, setAppIds] = useState([]);
+  const [selectedReviewers, setSelectedReviewers] = useState({}); // { reviewerEmail: true }
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  // Fetch applications for this admin
   useEffect(() => {
-    // Fetch the application for this admin
-    const fetchApp = async () => {
-      if (!user?.email) return;
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const res = await fetch('/creating');
-        const apps = await res.json();
-        const myApp = apps.find(app => app.adminEmail === user.email);
-        setAppName(myApp ? myApp.appName : '');
+        // 1. Get all applications for this admin
+        const appsRes = await axios.get('/creating');
+        const myApps = appsRes.data.filter(app => app.adminEmail === user.email);
+        const myAppIds = myApps.map(app => app._id);
+        setAppIds(myAppIds);
+
+        // 2. Get all pending audits for admin (new endpoint)
+        const auditsRes = await axios.get('/pendingAuditsForAdmin', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setPendingReviews(auditsRes.data);
+        setError('');
       } catch (e) {
-        setAppName('');
+        setError('Failed to fetch pending reviews.');
+      } finally {
+        setLoading(false);
       }
     };
-    fetchApp();
+    if (user?.email) fetchData();
   }, [user]);
+
+  // Group pending reviews by reviewer
+  const reviewerMap = {};
+  pendingReviews.forEach(audit => {
+    const reviewerEmail = audit.user_id?.email;
+    if (!reviewerEmail) return;
+    if (!reviewerMap[reviewerEmail]) {
+      reviewerMap[reviewerEmail] = {
+        reviewerName: audit.user_id?.name || reviewerEmail,
+        audits: [],
+      };
+    }
+    reviewerMap[reviewerEmail].audits.push(audit);
+  });
+
+  const handleSelectReviewer = (email) => {
+    setSelectedReviewers(prev => ({ ...prev, [email]: !prev[email] }));
+  };
+
+  const handleSelectAll = () => {
+    const allSelected = Object.keys(reviewerMap).every(email => selectedReviewers[email]);
+    if (allSelected) {
+      setSelectedReviewers({});
+    } else {
+      const newSelected = {};
+      Object.keys(reviewerMap).forEach(email => {
+        newSelected[email] = true;
+      });
+      setSelectedReviewers(newSelected);
+    }
+  };
+
+  const handleNotify = async () => {
+    const reviewersToNotify = Object.keys(selectedReviewers).filter(email => selectedReviewers[email]);
+    if (reviewersToNotify.length === 0) {
+      Swal.fire('Select at least one reviewer to notify.', '', 'warning');
+      return;
+    }
+    setLoading(true);
+    try {
+      // For each reviewer, send a notification with their pending employees
+      await Promise.all(
+        reviewersToNotify.map(async (email) => {
+          const audits = reviewerMap[email].audits;
+          const employeeNames = audits.map(a => a.emp_id?.name).filter(Boolean);
+          await axios.post('/sendReviewNotification', {
+            reviewerEmail: email,
+            employeeNames,
+            message: `Your Review Is Pending On These Employees: ${employeeNames.join(', ')}. Please Review Fast.`
+          });
+        })
+      );
+      Swal.fire('Notification(s) sent!', '', 'success');
+    } catch (e) {
+      Swal.fire('Failed to send notification(s).', '', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="app">
       <Navbar />
       <div className="content-wrapper">
         <Sidebar />
-        {/* Removed welcome message and application name */}
+        <div className="dashboard-container">
+          <h2>Pending Reviews (Your Applications)</h2>
+          {loading ? (
+            <p>Loading...</p>
+          ) : error ? (
+            <p className="text-danger">{error}</p>
+          ) : (
+            <>
+              <button className="btn btn-primary mb-3" onClick={handleSelectAll}>
+                {Object.keys(reviewerMap).every(email => selectedReviewers[email]) ? 'Deselect All' : 'Select All'}
+              </button>
+              <button className="btn btn-success mb-3 ms-2" onClick={handleNotify} disabled={loading}>
+                Notify Selected Reviewers
+              </button>
+              <table className="table table-bordered">
+                <thead className="table-dark">
+                  <tr>
+                    <th>Select</th>
+                    <th>Reviewer Name</th>
+                    <th>Reviewer Email</th>
+                    <th>Pending Employees</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.keys(reviewerMap).length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="text-center">No pending reviews found</td>
+                    </tr>
+                  ) : (
+                    Object.entries(reviewerMap).map(([email, { reviewerName, audits }]) => (
+                      <tr key={email}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={!!selectedReviewers[email]}
+                            onChange={() => handleSelectReviewer(email)}
+                          />
+                        </td>
+                        <td>{reviewerName}</td>
+                        <td>{email}</td>
+                        <td>{audits.map(a => a.emp_id?.name).filter(Boolean).join(', ')}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1568,38 +1568,30 @@ app.post('/create-admin', async (req, res) => {
 });
 
 app.post('/sendReviewNotification', async (req, res) => {
-  const { auditId, selectedAction, remark, employeeName, adminEmail, rightsDetails, reviewerName } = req.body;
-
   try {
-    // Use the selected action text in the subject and body
-    const actionText = selectedAction === 'revoke' ? 'Revoked' : 'Retained';
-    const subject = `Review Action: ${actionText} by ${reviewerName} for ${employeeName}`;
+    const { reviewerEmail, employeeNames, message } = req.body;
+    if (!reviewerEmail || !employeeNames || !Array.isArray(employeeNames) || employeeNames.length === 0) {
+      return res.status(400).json({ success: false, message: 'Missing reviewerEmail or employeeNames.' });
+    }
+
+    const subject = 'Entitlement Review Pending Notification';
     const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Review Action Notification</h2>
-        <p>Dear Application Admin,</p>
-        <p>This email is to notify you that <b>${reviewerName}</b> has reviewed the rights for employee <b>${employeeName}</b> and taken the action: <b>${actionText}</b>.</p>
-        <h3>Reviewed Rights:</h3>
-        <div>${rightsDetails}</div>
-        <h3>Reviewer Remarks:</h3>
-        <div>${remark}</div>
-        <br>
-        <p>Please take necessary action in your application.</p>
+        <h2>Review Pending Notification</h2>
+        <p>Dear Reviewer,</p>
+        <p>${message}</p>
+        <ul>
+          ${employeeNames.map(name => `<li>${name}</li>`).join('')}
+        </ul>
+        <p>Please log in to the system and complete your reviews as soon as possible.</p>
         <p>Regards,<br>ER Admin</p>
       </div>
     `;
 
-    // Use the email service
-    await sendEmail({
-      to: adminEmail,
-      subject,
-      html
-    });
-
-    res.json({ success: true, message: 'Review action recorded and email notification sent.' });
-
+    await sendEmail({ to: reviewerEmail, subject, html });
+    res.json({ success: true, message: 'Notification sent.' });
   } catch (error) {
-    console.error('Error processing review notification:', error);
+    console.error('Error sending review notification:', error);
     res.status(500).json({ success: false, message: 'Failed to process review notification.' });
   }
 });
@@ -1720,5 +1712,30 @@ app.post('/convertToReviewer', async (req, res) => {
   } catch (err) {
     console.error('Error in /convertToReviewer:', err);
     res.status(500).json({ message: 'Failed to convert employee to reviewer.', error: err.message });
+  }
+});
+
+// Get all pending audits for the applications managed by the logged-in app_admin (no date filter)
+app.get('/pendingAuditsForAdmin', checkAuth, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'app_admin') {
+      return res.status(403).json({ message: 'Forbidden: Only Application Admins can access this endpoint.' });
+    }
+    // Find all applications managed by this admin
+    const apps = await AppModel.find({ adminEmail: req.user.email });
+    const appIds = apps.map(app => app._id);
+    // Find all pending audits for these applications
+    const audits = await AuditModel.find({
+      status: true,
+      reviewer_rightsGiven: null,
+      application_id: { $in: appIds }
+    })
+      .populate('application_id', 'appName app_rights')
+      .populate('emp_id', 'name')
+      .populate('user_id', 'name email');
+    res.json(audits);
+  } catch (error) {
+    console.error('Error fetching pending audits for admin:', error);
+    res.status(500).json({ message: 'Error fetching pending audits for admin', error: error.message });
   }
 });
