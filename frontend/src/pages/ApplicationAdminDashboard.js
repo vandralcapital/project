@@ -12,7 +12,7 @@ const ApplicationAdminDashboard = () => {
     const fetchApp = async () => {
       if (!user?.email) return;
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/creating`);
+        const res = await fetch('/creating');
         const apps = await res.json();
         const myApp = apps.find(app => app.adminEmail === user.email);
         setAppName(myApp ? myApp.appName : '');

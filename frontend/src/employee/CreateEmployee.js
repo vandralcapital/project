@@ -16,7 +16,7 @@ const EmployeeForm = () => {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/hods`)
+    fetch('/hods')
       .then((response) => {
         if (!response.ok) {
           throw new Error('Failed to fetch register');
@@ -31,7 +31,7 @@ const EmployeeForm = () => {
       });
 
     // Fetch applications
-    axios.get(`${process.env.REACT_APP_API_URL}/creating`)
+    axios.get('/creating')
       .then((result) => setApplications(result.data))
       .catch((err) => console.error('Failed to fetch applications', err));
   }, []);
@@ -56,7 +56,7 @@ const EmployeeForm = () => {
       };
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/employee`,
+        '/employee',
         newEmployee,
         {
           headers: {

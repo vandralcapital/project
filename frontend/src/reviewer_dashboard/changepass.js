@@ -25,7 +25,7 @@ const ChangePassword = () => {
 
         try {
             setLoading(true);
-            const response = await axios.post(`${process.env.REACT_APP_API_URL}/change-password`, {
+            const response = await axios.post('/change-password', {
                 userId: user._id,
                 oldPassword,
                 newPassword

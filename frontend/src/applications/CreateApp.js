@@ -21,7 +21,7 @@ const CreateApp = () => {
   const [adminEmail, setAdminEmail] = useState(''); // New state for admin email
 
 useEffect(() => {
-  fetch(`${process.env.REACT_APP_API_URL}/frequency`)
+  fetch('/frequency')
     .then((response) => {
       if (!response.ok) {
         throw new Error('Failed to fetch frequencies');
@@ -44,7 +44,7 @@ const handleFrequencyChange = async (e) => {
   setSelectedFrequency(frequencyId);
 
   try {
-    const response = await axios.get(`${process.env.REACT_APP_API_URL}/getNextAuditDate`,{
+    const response = await axios.get('/getNextAuditDate',{
       params: { frequency_id: frequencyId }  // Send frequency_id in the query parameters
     });
     setNextAuditDate(response.data.message);  // Set the next audit date from the API response
@@ -71,7 +71,7 @@ const handleFrequencyChange = async (e) => {
     };
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/createApplication`, newUser);
+      const response = await axios.post('/createApplication', newUser);
 
       Swal.fire({
         title: "Application Created Successfullly",
