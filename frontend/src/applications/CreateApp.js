@@ -65,7 +65,6 @@ const handleFrequencyChange = async (e) => {
       roles,
       // status,
       frequency_id: selectedFrequency, // Save the selected frequency ID as referenc
-      desc,
       app_rights: appRights.filter(right => right.trim() !== ''),  // Remove empty inputs
       adminEmail // Add admin email to the data being sent
     };
@@ -194,18 +193,6 @@ const handleFrequencyChange = async (e) => {
               >
                 +
               </button>
-            </div>
-
-            <div className="mb-3">
-              <label htmlFor="desc" className="form-label">Description/Notes</label>
-              <textarea
-                id="desc"
-                className="form-control"
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                placeholder="Additional notes about the application"
-                rows="3"
-              ></textarea>
             </div>
 
             <button type="submit" className="btn btn-primary" style={{backgroundColor: "#167340"}} disabled={isLoading}>

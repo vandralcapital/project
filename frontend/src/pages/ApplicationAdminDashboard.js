@@ -28,10 +28,7 @@ const ApplicationAdminDashboard = () => {
       <Navbar />
       <div className="content-wrapper">
         <Sidebar />
-        <div style={{ flex: 1, padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start' }}>
-          <h2 style={{ marginBottom: 10 }}>Welcome!</h2>
-          <p style={{ marginBottom: 30, fontSize: 22 }}>Application: <b>{appName || '...'}</b></p>
-        </div>
+        {/* Removed welcome message and application name */}
       </div>
     </div>
   );

@@ -45,6 +45,7 @@ import UploadEmployees from './employee/UploadEmployees';
 import UploadHods from './hod/UploadHod';
 import CreateAdmin from './user/CreateAdmin';
 import ExportCompletedReviews from './pages/ExportCompletedReviews';
+import MyEmployees from './pages/MyEmployees';
 
 function App() {
   
@@ -117,7 +118,7 @@ function App() {
 
             <Route path='/myEmployees' element={
              <ProtectedRoute>
-              
+              <MyEmployees />
              </ProtectedRoute>
             }></Route>
 

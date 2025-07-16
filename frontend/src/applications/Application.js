@@ -69,7 +69,7 @@ function App() {
     setEditForm({
       appName: app.appName || '',
       desc: app.desc || '',
-      frequency_id: app.frequency_id?._id || '', // Use _id if populated
+      frequency_id: Array.isArray(app.frequency_id) ? (app.frequency_id[0]?._id || '') : (app.frequency_id?._id || app.frequency_id || ''), // Handles array, object, or string
       app_rights: initialAppRights, // Use the transformed or original app_rights
       adminEmail: app.adminEmail || '' // Initialize admin email
     });
@@ -227,7 +227,6 @@ function App() {
               <th>Last Audit Date</th>
               <th>Next Audit Date</th>
 
-              <th>Description Notes</th>
               <th>Admin Email</th>
               <th>App Rights</th>
               <th>Status</th>
@@ -239,11 +238,10 @@ function App() {
     <tr key={app._id}>
       <td>{app.appName}</td>
       {/* Display frequency name from populated object */}
-      <td>{app.frequency_id?.name || "-"}</td>
+      <td>{Array.isArray(app.frequency_id) ? (app.frequency_id[0]?.name || "-") : (app.frequency_id?.name || "-")}</td>
       <td> <small className="text-muted">{app.last_audit_date ? new Date(app.last_audit_date).toLocaleDateString() : 'No review done'}</small></td>
 <td>{new Date(app.next_audit_date).toLocaleDateString()}</td>
 
-      <td>{app.desc}</td>
       <td>{app.adminEmail}</td>
       <td>
         {/* Display app_rights as badges - consistently handle nested object structure */}
@@ -319,16 +317,6 @@ function App() {
                     onChange={handleInputChange}
                     required
                   />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Description Notes</label>
-                  <textarea
-                    className="form-control"
-                    name="desc"
-                    value={editForm.desc}
-                    onChange={handleInputChange}
-                    rows="3"
-                  ></textarea>
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Application Admin Email</label>

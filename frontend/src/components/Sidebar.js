@@ -28,14 +28,15 @@ const Sidebar = () => {
               <FaClipboardCheck style={{ marginRight: 10 }} /> Export Completed Reviews
             </button>
           </li>
-          <li>
-            <button className="sidebar-btn" onClick={() => navigate('/employeescreate')}>
-              <FaUserPlus style={{ marginRight: 10 }} /> Create Employees
-            </button>
-          </li>
+          {/* Removed Create Employees button for app_admin */}
           <li>
             <button className="sidebar-btn" onClick={() => navigate('/uploademployee')}>
               <FaFileUpload style={{ marginRight: 10 }} /> Upload Employee
+            </button>
+          </li>
+          <li>
+            <button className="sidebar-btn" onClick={() => navigate('/myEmployees')}>
+              <FaUsers style={{ marginRight: 10 }} /> My Employees
             </button>
           </li>
         </ul>

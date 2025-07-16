@@ -1,3 +1,4 @@
+/*
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from "../components/Navbar";
@@ -147,3 +148,4 @@ const EmployeeForm = () => {
 };
 
 export default EmployeeForm;
+*/
