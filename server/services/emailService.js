@@ -3,12 +3,16 @@ const nodemailer = require("nodemailer");
 const SMTP_CONFIG = {
   host: process.env.SMTP_HOST || "mail.religare.com",
   port: parseInt(process.env.SMTP_PORT) || 25,
-  secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
+  secure: process.env.SMTP_SECURE === "true"
 };
+
+// Only set auth if both EMAIL_USER and EMAIL_PASS are present
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  SMTP_CONFIG.auth = {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  };
+}
 
 const transporter = nodemailer.createTransport({
   ...SMTP_CONFIG,
@@ -23,7 +27,7 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async ({ to, subject, text, html }) => {
   try {
     const mailOptions = {
-      from: SMTP_CONFIG.auth.user,
+      from: process.env.EMAIL_USER,
       to,
       subject,
       ...(text && { text }),
