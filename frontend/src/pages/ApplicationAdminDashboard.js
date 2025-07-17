@@ -110,7 +110,7 @@ const ApplicationAdminDashboard = () => {
           await axios.post('/sendReviewNotification', {
             reviewerEmail: email,
             employeeNames,
-            message: `Your Review Is Pending On These Employees: ${employeeNames.join(', ')}. Please Review Fast.`
+            message: `The following employee(s) are awaiting your review: ${employeeNames.join(', ')}.`
           });
         })
       );

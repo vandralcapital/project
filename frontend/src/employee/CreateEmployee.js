@@ -10,8 +10,6 @@ const EmployeeForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [users, setUsers] = useState([]);  // To hold HOD data
   const [selectedUser, setSelectedUser] = useState('');  // Store selected HOD ID
-  const [applications, setApplications] = useState([]); // To hold application data
-  const [selectedApplication, setSelectedApplication] = useState(''); // Store selected application name
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -31,18 +29,18 @@ const EmployeeForm = () => {
       });
 
     // Fetch applications
-    axios.get('/creating')
-      .then((result) => setApplications(result.data))
-      .catch((err) => console.error('Failed to fetch applications', err));
+    // axios.get('/creating')
+    //   .then((result) => setApplications(result.data))
+    //   .catch((err) => console.error('Failed to fetch applications', err));
   }, []);
 
   const handleUserChange = (e) => {
     setSelectedUser(e.target.value); // Set selected HOD ID
   };
 
-  const handleApplicationChange = (e) => {
-    setSelectedApplication(e.target.value); // Set selected application name
-  };
+  // const handleApplicationChange = (e) => {
+  //   setSelectedApplication(e.target.value); // Set selected application name
+  // };
 
   // Handle form submission to add a new employee
   const handleSubmit = async (e) => {
@@ -52,7 +50,7 @@ const EmployeeForm = () => {
         name,
         email,
         user_id: selectedUser, // Add the selected user (HOD ID) here
-        applicationName: selectedApplication // Add the selected application name here
+        // applicationName: selectedApplication // Add the selected application name here
       };
       const token = localStorage.getItem('token');
       const response = await axios.post(
@@ -126,7 +124,7 @@ const EmployeeForm = () => {
               </select>
             </div>
 
-            <div className="mb-3">
+            {/* <div className="mb-3">
               <label>Select Application:</label>
               <select value={selectedApplication} onChange={handleApplicationChange} className='form-control' required>
                 <option value="">-- Select Application --</option>
@@ -136,7 +134,7 @@ const EmployeeForm = () => {
                   </option>
                 ))}
               </select>
-            </div>
+            </div> */}
 
             <button type="submit" className="btn btn-primary" style={{backgroundColor: "#167340"}}>Add Employee</button>
           </form>

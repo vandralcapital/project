@@ -124,7 +124,7 @@ function App() {
           }></Route>
 
             <Route path='/pastReviews' element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={["admin", "hod"]}>
               <AuditList />
             </ProtectedRoute>
             }></Route>
@@ -140,8 +140,9 @@ function App() {
               <UploadExcel/>
             </ProtectedRoute>
             }></Route>
+          {/* Commented out for app_admin: UploadEmployees should not be accessible to app_admin users */}
 <Route path='/uploademployee' element={
-            <ProtectedRoute allowedRoles={["admin", "app_admin"]}>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <UploadEmployees/>
             </ProtectedRoute>
             }></Route>

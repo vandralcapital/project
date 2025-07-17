@@ -34,11 +34,14 @@ const Sidebar = () => {
             </button>
           </li>
           {/* Removed Create Employees button for app_admin */}
+          {/* Commented out for app_admin: Upload Employee should not be visible to app_admin users */}
+          {/*
           <li>
             <button className="sidebar-btn" onClick={() => navigate('/uploademployee')}>
               <FaFileUpload style={{ marginRight: 10 }} /> Upload Employee
             </button>
           </li>
+          */}
           {/* <li>
             <button className="sidebar-btn" onClick={() => navigate('/myEmployees')}>
               <FaUsers style={{ marginRight: 10 }} /> My Employees

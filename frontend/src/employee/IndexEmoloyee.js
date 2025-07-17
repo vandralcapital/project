@@ -10,8 +10,10 @@ const EmployeeIndex = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [editForm, setEditForm] = useState({
     name: '',
-    email: ''
+    email: '',
+    user_id: '' // Add user_id to form
   });
+  const [reviewers, setReviewers] = useState([]); // State for reviewers
 
   // Fetch employees data from the backend
   const fetchEmployees = async () => {
@@ -20,6 +22,16 @@ const EmployeeIndex = () => {
       setEmployees(response.data);
     } catch (err) {
       setError('Error fetching employee data.');
+    }
+  };
+
+  // Fetch reviewers (HODs)
+  const fetchReviewers = async () => {
+    try {
+      const response = await axios.get('/hods');
+      setReviewers(response.data);
+    } catch (err) {
+      setError('Error fetching reviewers.');
     }
   };
 
@@ -51,9 +63,11 @@ const EmployeeIndex = () => {
     setEditingEmployee(employee);
     setEditForm({
       name: employee.name,
-      email: employee.email
+      email: employee.email,
+      user_id: employee.user_id?._id || '' // Set current reviewer
     });
     setShowModal(true);
+    fetchReviewers(); // Fetch reviewers when opening modal
   };
 
   // Handle form input changes
@@ -62,6 +76,14 @@ const EmployeeIndex = () => {
     setEditForm(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  // Handle reviewer dropdown change
+  const handleReviewerChange = (e) => {
+    setEditForm(prev => ({
+      ...prev,
+      user_id: e.target.value
     }));
   };
 
@@ -76,7 +98,7 @@ const EmployeeIndex = () => {
         }
       });
       setEmployees(employees.map(employee => 
-        employee._id === editingEmployee._id ? { ...employee, ...editForm } : employee
+        employee._id === editingEmployee._id ? { ...employee, ...editForm, user_id: reviewers.find(r => r._id === editForm.user_id) } : employee
       ));
       setShowModal(false);
     } catch (err) {
@@ -213,6 +235,23 @@ const EmployeeIndex = () => {
                       onChange={handleInputChange}
                       required
                     />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Reviewer (HOD)</label>
+                    <select
+                      className="form-select"
+                      name="user_id"
+                      value={editForm.user_id}
+                      onChange={handleReviewerChange}
+                      required
+                    >
+                      <option value="">Select Reviewer</option>
+                      {reviewers.map(reviewer => (
+                        <option key={reviewer._id} value={reviewer._id}>
+                          {reviewer.name} ({reviewer.email})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="modal-footer">
                     <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>

@@ -699,16 +699,17 @@ app.post('/employee', checkAuth, async (req, res) => {
   if (!req.user || (req.user.role !== 'app_admin' && req.user.role !== 'admin')) {
     return res.status(403).json({ message: 'Forbidden: Only Admins and Application Admins can create employees.' });
   }
-  const { applicationName } = req.body;
-  if (!applicationName) {
-    return res.status(400).json({ message: 'Missing required field: applicationName' });
-  }
+  // const { applicationName } = req.body;
+  // if (!applicationName) {
+  //   return res.status(400).json({ message: 'Missing required field: applicationName' });
+  // }
   // If user is app_admin, check that the logged-in user is the admin for this application
   if (req.user.role === 'app_admin') {
-    const app = await AppModel.findOne({ appName: applicationName });
-    if (!app || app.adminEmail !== req.user.email) {
-      return res.status(403).json({ message: 'Forbidden: You are not the admin for this application.' });
-    }
+    // Optionally, you can still check for applicationName if needed for app_admins
+    // const app = await AppModel.findOne({ appName: applicationName });
+    // if (!app || app.adminEmail !== req.user.email) {
+    //   return res.status(403).json({ message: 'Forbidden: You are not the admin for this application.' });
+    // }
   }
   // Ensure a default status of true (Enabled) is set, allow explicit false
   const newEmployeeData = {
@@ -802,6 +803,13 @@ app.post("/uploadEmployees", upload.single("file"), async (req, res) => {
 
         // Find or create Employee
         let employee = await EmployeeModel.findOne({ email: employeeEmail });
+        if (employee) {
+          // Check if employee already has a different reviewer
+          if (employee.user_id && employee.user_id.toString() !== reviewer._id.toString()) {
+            errors.push(`Row ${row.__rowNum__}: Employee ${employeeEmail} is already assigned to a different reviewer.`);
+            continue;
+          }
+        }
         if (!employee) {
           employee = new EmployeeModel({
             name: row['Emp Name'],
@@ -1129,6 +1137,12 @@ app.post('/excelUpload', checkAuth, async (req, res) => {
         const reviewer = await UserModel.findOne({ email: hodEmail });
         if (!reviewer) {
           errorArr.push({ row: i + 2, error: `Reviewer (HOD) not found: ${hodEmail}` });
+          continue;
+        }
+
+        // Check if employee already has a different reviewer
+        if (employee.user_id && employee.user_id.toString() !== reviewer._id.toString()) {
+          errorArr.push({ row: i + 2, error: `Employee ${employeeEmail} is already assigned to a different reviewer.` });
           continue;
         }
 
@@ -1600,8 +1614,8 @@ app.post('/sendReviewNotification', async (req, res) => {
         <ul>
           ${employeeNames.map(name => `<li>${name}</li>`).join('')}
         </ul>
-        <p>Please log in to the system and complete your reviews as soon as possible.</p>
-        <p>Regards,<br>ER Admin</p>
+        <p>Kindly log in to the system <a href="https://ers.religare.in">https://ers.religare.in</a> and complete your pending reviews at the earliest..</p>
+        <p>Regards,<br>RHDFCL IT TEAM</p>
       </div>
     `;
 
