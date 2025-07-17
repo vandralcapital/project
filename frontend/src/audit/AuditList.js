@@ -439,13 +439,15 @@ const AuditList = () => {
                           >
                             Submit
                           </button>
-                          <button
-                            className="btn btn-info btn-sm mt-2"
-                            style={{ color: 'white' }}
-                            onClick={() => notifyReviewer(audit)}
-                          >
-                            Notify Email
-                          </button>
+                          {user?.role !== 'hod' && (
+                            <button
+                              className="btn btn-info btn-sm mt-2"
+                              style={{ color: 'white' }}
+                              onClick={() => notifyReviewer(audit)}
+                            >
+                              Notify Email
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

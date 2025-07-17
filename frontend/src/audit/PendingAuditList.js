@@ -281,13 +281,15 @@ const PendingAuditList = () => {
                       'Submit'
                     )}
                   </button>
-                  <button
-                    className="btn btn-info mt-2"
-                    style={{ color: 'white' }}
-                    onClick={() => notifyReviewer(audit)}
-                  >
-                    Notify Email
-                  </button>
+                  {user.role === 'hod' && (
+                    <button
+                      className="btn btn-info mt-2"
+                      style={{ color: 'white' }}
+                      onClick={() => notifyReviewer(audit)}
+                    >
+                      Notify Email
+                    </button>
+                  )}
                   {submitError[audit._id] && (
                     <div className="text-danger mt-1">{submitError[audit._id]}</div>
                   )}

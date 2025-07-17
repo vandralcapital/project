@@ -343,7 +343,6 @@ const CreateAuditForm = () => {
         </div>
       </div>
     </div>
-    // TODO
   );
 };
 

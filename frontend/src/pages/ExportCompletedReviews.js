@@ -103,7 +103,7 @@ const ExportCompletedReviews = () => {
       <div className="content-wrapper">
         <Sidebar />
         <div className="dashboard-container">
-          <h2>Export Completed Reviews</h2>
+          <h2>Completed Reviews</h2>
           <button className="btn btn-success mb-3" onClick={handleExport} disabled={completedReviews.length === 0}>
             Export to Excel
           </button>

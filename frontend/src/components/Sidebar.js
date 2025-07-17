@@ -30,7 +30,7 @@ const Sidebar = () => {
           </li>
           <li>
             <button className="sidebar-btn" onClick={() => navigate('/exportCompletedReviews')}>
-              <FaClipboardCheck style={{ marginRight: 10 }} /> Export Completed Reviews
+              <FaClipboardCheck style={{ marginRight: 10 }} /> Completed Reviews
             </button>
           </li>
           {/* Removed Create Employees button for app_admin */}
