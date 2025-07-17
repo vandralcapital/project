@@ -19,6 +19,7 @@ const setupChangeLogging = require('./middleware/setupChangeLogging');
 const { FrequencyLog, EmployeeLog, ApplicationLog } = require('./models/logSchemas');
 const { authenticateLDAP, verifyLDAPCredentials } = require('./services/ldapService');
 const Session = require('./models/Session');
+const OldAdminNoRights = require('./models/oldAdminNoRights');
 
 // require("dotenv").config();
 
@@ -201,11 +202,12 @@ app.post("/createApplication", async (req, res) => {
           appAdmin = new UserModel({
             name: adminEmail.split('@')[0],
             email: adminEmail,
-            password: adminEmail, // Default password is email, should be changed by user
+            // password: adminEmail, // Remove default password
             role: 'app_admin',
             status: true,
             applicationId: app._id,
-            applicationName: app.appName
+            applicationName: app.appName,
+            authType: 'ldap' // Set authType to ldap
           });
           await appAdmin.save();
         } else {
@@ -213,6 +215,7 @@ app.post("/createApplication", async (req, res) => {
           appAdmin.role = 'app_admin';
           appAdmin.applicationId = app._id;
           appAdmin.applicationName = app.appName;
+          appAdmin.authType = 'ldap'; // Ensure authType is ldap
           await appAdmin.save();
         }
 
@@ -787,8 +790,9 @@ app.post("/uploadEmployees", upload.single("file"), async (req, res) => {
           reviewer = new UserModel({
             name: row['Reviewer Name'] || reviewerEmail.split('@')[0], // Use Reviewer Name if provided, otherwise use email prefix
             email: reviewerEmail,
-            password: reviewerEmail, // Set password same as email
-            role: 'hod'
+            // password: reviewerEmail, // Remove default password
+            role: 'hod',
+            authType: 'ldap' // Set authType to ldap
           });
           await reviewer.save();
           console.log(`Created new Reviewer (HOD): ${reviewerEmail}`);
@@ -837,8 +841,9 @@ app.post("/uploadEmployees", upload.single("file"), async (req, res) => {
             userAccount = new UserModel({
               name: row['Emp Name'], // Use employee's name for their user account
               email: employeeEmail,
-              password: employeeEmail, // Set password same as email
-              role: 'hod'
+              // password: employeeEmail, // Remove default password
+              role: 'hod',
+              authType: 'ldap' // Set authType to ldap
             });
             await userAccount.save();
             console.log(`Created new User account for HOD: ${employeeEmail}`);
@@ -911,8 +916,9 @@ app.post("/uploadHods", upload.single("file"), async (req, res) => {
             const newHodData = {
       name: row.Name, // Use the 'Name' column
       email: row.Email, // Use the 'Email' column
-      password: row.Password, // Use the 'Password' column
+      // password: row.Password, // Remove default password
       role: "hod", // Assigning "hod" role (lowercase)
+      authType: 'ldap' // Set authType to ldap
             };
 
             // Create HOD in MongoDB
@@ -1249,22 +1255,44 @@ app.put('/apps/:id', checkAuth, async (req, res) => {
     if (updateData.adminEmail) {
       // Find the app to get its name
       const app = await AppModel.findById(appId);
+      // Find the current app_admin for this app
+      const oldAdmin = await UserModel.findOne({ applicationId: appId, role: 'app_admin', email: { $ne: updateData.adminEmail } });
+      if (oldAdmin) {
+        // Move old admin to oldAdminNoRights collection
+        await OldAdminNoRights.create({
+          name: oldAdmin.name,
+          email: oldAdmin.email,
+          password: oldAdmin.password,
+          company_name: oldAdmin.company_name,
+          role: oldAdmin.role,
+          applicationId: oldAdmin.applicationId,
+          applicationName: oldAdmin.applicationName,
+          originalUserId: oldAdmin._id,
+          status: false,
+          authType: oldAdmin.authType
+        });
+        // Remove old admin from User collection
+        await UserModel.deleteOne({ _id: oldAdmin._id });
+      }
       let appAdmin = await UserModel.findOne({ email: updateData.adminEmail });
       if (!appAdmin) {
         appAdmin = new UserModel({
           name: updateData.adminEmail.split('@')[0],
           email: updateData.adminEmail,
-          password: updateData.adminEmail, // Default password is email, should be changed by user
+          // password: updateData.adminEmail, // Remove default password
           role: 'app_admin',
           status: true,
           applicationId: app ? app._id : undefined,
-          applicationName: app ? app.appName : undefined
+          applicationName: app ? app.appName : undefined,
+          authType: 'ldap' // Set authType to ldap
         });
         await appAdmin.save();
       } else {
         appAdmin.role = 'app_admin';
         appAdmin.applicationId = app ? app._id : undefined;
         appAdmin.applicationName = app ? app.appName : undefined;
+        appAdmin.status = true;
+        appAdmin.authType = 'ldap'; // Ensure authType is ldap
         await appAdmin.save();
       }
     }
